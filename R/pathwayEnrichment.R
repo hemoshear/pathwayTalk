@@ -11,7 +11,7 @@
 getReactomePathways <- function(species = 'Homo sapiens') {
     # reactome_infile <- system.file('extdata', 'ReactomePathways.gmt', package = 'pathwayTalk')
     # This file contains the Hugo gene symbols that correspond to each Reactome Pathway
-    reactome <- GSA::GSA.read.gmt('inst/extdata/ReactomePathways.gmt')
+    reactome <- GSA::GSA.read.gmt('inst/extdata/ReactomePathways.txt')
     # This file contains the reactome pathway identifiers, descriptions, and species.
     pathways <- read.delim('https://reactome.org/download/current/ReactomePathways.txt',
                            header=FALSE)
@@ -99,7 +99,7 @@ fisherPathwayEnrichment <- function(deg, fdr) {
                                      non_sig_not_in_pathway[[i]]),
                                    byrow = TRUE, nrow = 2, ncol=2)
         res <- fisher.test(contingency[[i]])
-        # Change strucutre of fisher.test output to data frame
+        # Change structure of fisher.test output to data frame
         fisher[[i]] <- data.frame(p = res$p.value, conf_int_lb = res$conf.int[1],
                          conf_int_ub = res$conf.int[2],
                          estimate = res$estimate, pathway=names(pathways)[i])
