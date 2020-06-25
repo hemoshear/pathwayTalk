@@ -109,7 +109,3 @@ fisherPathwayEnrichment <- function(deg, fdr) {
 }
 
 
-# Run diffExpression.R first
-# a <- entrez_to_hgnc(b)
-# tests <- purrr::map(a, ~ fisherEnrichment(., fdr=0.01))
-# names(tests) <- names(a)
