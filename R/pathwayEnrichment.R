@@ -63,7 +63,7 @@ entrez_to_hgnc <- function(deg, mart='hsapiens_gene_ensembl') {
 #' Do pathway enrichment with Fisher's exact test
 #' 
 #' @param deg diffExpression --> entrez_to_hgnc
-#' @param fdr Numeric vector to indicate FDR for calling significance
+#' @param alpha numeric vector indicating significance level
 #' @return data frame of results for the Fisher's exact tests.
 #'     `p` Unadjusted p-value
 #'     `conf_int_lb` Lower bound of odds ratio estimate
@@ -72,10 +72,10 @@ entrez_to_hgnc <- function(deg, mart='hsapiens_gene_ensembl') {
 #'     `pathway` Paste of Reactome pathway identifier and description.
 #' @export
 
-fisherPathwayEnrichment <- function(deg, fdr) {
+fisherPathwayEnrichment <- function(deg, alpha) {
     pathways <- getReactomePathways()
-    sig <- deg %>% dplyr::filter(adj.P.Val < fdr)
-    nonsig <- deg %>% dplyr::filter(adj.P.Val >= fdr)
+    sig <- deg %>% dplyr::filter(adj.P.Val < alpha)
+    nonsig <- deg %>% dplyr::filter(adj.P.Val >= alpha)
     
     # Enumerate contingency table, this can be cleaned up a lot. 
     sig_in_pathway <- purrr::map(
