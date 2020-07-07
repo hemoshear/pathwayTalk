@@ -1,5 +1,6 @@
 # testing -----------------------------------------------------------------
 library(Biobase)
+library(reactome.db)
 source('R/diffExpression.R')
 source('R/pathwayEnrichment.R')
 source('R/pathwayCrosstalk.R')
@@ -46,17 +47,31 @@ b <- diffExpression(data = exprs(data_test),
                     design_mat = design_mat_test,
                     contrast_mat = contrast_mat_test)
 
-b %<>% entrez_to_hgnc()
+for (i in 1:length(b)){
+    entrez_id <- rownames(b[[i]])
+    b[[i]] %<>% as.data.frame()
+    b[[i]]$entrez <- entrez_id
+    b[[i]]$canon_entrez <- strsplit(b[[i]]$entrez, split = '///') %>%
+        purrr::map_chr(~ .[1])
+}
+
 # do pathway enrichment with Fisher's exact test
-tests <- purrr::map(b, ~ fisherPathwayEnrichment(., fdr=0.01))
+tests <- purrr::map(b, ~ fisherPathwayEnrichment(., alpha=0.01))
 names(tests) <- names(b)
 
 # keep enriched pathways for each cancer subtype.
 sig_pathways <- purrr::map(tests, ~ dplyr::filter(., p < 0.05))
 names(sig_pathways) %<>% gsub(' \\- GFP', '', .)
-sig_pathways[[4]] %>% head
 
-ct <- pathwayCrosstalk(sig_pathways, data_test)
+# create one data frame with enriched pathways across cancer subtypes
+for (i in 1:length(sig_pathways)) {
+    sig_pathways[[i]]$subtype <- names(sig_pathways)[i]
+}
+sig_pathways %<>% dplyr::bind_rows()
+
+ct <- pathwayCrosstalkParallel(sig_pathways, data_test)
+
+
 
 # ct[[1]] %>% dim
 # ctalk <- purrr::map(sig_pathways, ~ pathwayCrosstalk(., data_test))
