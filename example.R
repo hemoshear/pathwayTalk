@@ -56,11 +56,11 @@ for (i in 1:length(b)){
 }
 
 # do pathway enrichment with Fisher's exact test
-tests <- purrr::map(b, ~ fisherPathwayEnrichment(., alpha=0.01))
+tests <- purrr::map(b, ~ fisherPathwayEnrichment(., alpha=0.001))
 names(tests) <- names(b)
 
 # keep enriched pathways for each cancer subtype.
-sig_pathways <- purrr::map(tests, ~ dplyr::filter(., p < 0.05))
+sig_pathways <- purrr::map(tests, ~ dplyr::filter(., adj_p < 0.001))
 names(sig_pathways) %<>% gsub(' \\- GFP', '', .)
 
 # create one data frame with enriched pathways across cancer subtypes
@@ -71,7 +71,3 @@ sig_pathways %<>% dplyr::bind_rows()
 
 ct <- pathwayCrosstalkParallel(sig_pathways, data_test)
 
-
-
-# ct[[1]] %>% dim
-# ctalk <- purrr::map(sig_pathways, ~ pathwayCrosstalk(., data_test))

@@ -41,7 +41,7 @@ fisherPathwayEnrichment <- function(deg, alpha) {
                                    byrow = TRUE, nrow = 2, ncol=2)
         res <- fisher.test(contingency[[i]], alternative = 'greater')
         # Change structure of fisher.test output to data frame
-        fisher[[i]] <- data.frame(p = res$p.value, 
+        fisher[[i]] <- data.frame(p = res$p.value, adj_p = p.adjust(res$p.value, method='fdr'),
                          estimate = res$estimate, pathway=names(pathways)[i])
     }
     dplyr::bind_rows(fisher) %>%

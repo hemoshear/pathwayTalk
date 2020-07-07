@@ -73,7 +73,7 @@ pathwayCrosstalkParallel <- function(enriched_pathways, eset) {
 
     do_pathway_crosstalk <- function(d, enriched_pathways) {
         s <- list()
-        for (pathway in unique(enriched_pathways$pathway)[1:300]) { # 1:400 is a hack for debugging right now
+        for (pathway in unique(enriched_pathways$pathway)) { 
             # Filter data frame 
             to_keep <- which(d$canon_entrez %in% pathways[[pathway]])
             this_d <- d[to_keep,]
