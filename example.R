@@ -69,5 +69,5 @@ for (i in 1:length(sig_pathways)) {
 }
 sig_pathways %<>% dplyr::bind_rows()
 
+# Each element is a matrx of discriminating scores.
 ct <- pathwayCrosstalkParallel(sig_pathways, data_test)
-
