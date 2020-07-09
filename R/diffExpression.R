@@ -58,7 +58,7 @@ diffExpression <- function(data,
 
     names(results) <- contrast_names
 
-    return(results)
+    results
 
 }
 
