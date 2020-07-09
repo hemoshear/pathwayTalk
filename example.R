@@ -70,4 +70,32 @@ for (i in 1:length(sig_pathways)) {
 sig_pathways %<>% dplyr::bind_rows()
 
 # Each element is a matrx of discriminating scores.
-ct <- pathwayCrosstalkParallel(sig_pathways, data_test)
+ct <- pathwayCrosstalkParallel(sig_pathways, data_test, processes=40)
+
+# Convert each matrix into a single vector and combine these to create a matrix
+# where rows are pathway pairs and columns are samples.
+ct_feature <- list()
+matrix2vec <- function(m) {
+    vec <- c()
+    pathway_pair <- c()
+    for (i in 1:nrow(m)) {
+        for (j in 1:ncol(m)) {
+            if (i > j) {
+                vec <- c(vec, m[i,j])
+                pathway_pair <- c(pathway_pair, paste0(rownames(m)[i], ',', colnames(m)[j]))
+            }
+        }
+    }
+
+    names(vec) <- pathway_pair
+    vec
+}
+for (rna_sample in 1:length(ct)) {
+    ct_feature[[rna_sample]] <- matrix2vec(ct[[rna_sample]])
+} 
+ct_feature_matrix <- do.call('cbind', ct_feature)
+rownames(ct_feature_matrix) <- names(ct_feature[[1]])
+colnames(ct_feature_matrix) <- names(ct)
+# ct_feature_matrix will be input to classifier in next step
+
+

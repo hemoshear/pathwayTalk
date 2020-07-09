@@ -56,7 +56,7 @@ pathwayCrosstalk <- function(enriched_pathways, eset) {
 #' @param eset 
 #' 
 
-pathwayCrosstalkParallel <- function(enriched_pathways, eset) {
+pathwayCrosstalkParallel <- function(enriched_pathways, eset, processes=4) {
     pathways <- as.list(reactome.db::reactomePATHID2EXTID)
     pathways <- pathways[grep('HSA', names(pathways))]    # Convert Entrez to Hugo in data frame where we have probes collapsed to gene-level
     
@@ -103,7 +103,7 @@ pathwayCrosstalkParallel <- function(enriched_pathways, eset) {
     sample_data <- purrr::map(names(treatment_map), ~ d[,c(., 'entrez', 'canon_entrez')])
     # do_pathway_crosstalk(sample_data[[1]], enriched_pathways)
     res <- parallel::mclapply(sample_data, function(x) (do_pathway_crosstalk(x, enriched_pathways)),
-                              mc.cores=40)
+                              mc.cores=processes)
     names(res) <- names(treatment_map)
     
     return(res)
