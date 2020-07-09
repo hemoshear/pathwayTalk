@@ -58,23 +58,23 @@ pathwayCrosstalk <- function(enriched_pathways, eset) {
 
 pathwayCrosstalkParallel <- function(enriched_pathways, eset, processes=4) {
     pathways <- as.list(reactome.db::reactomePATHID2EXTID)
-    pathways <- pathways[grep('HSA', names(pathways))]    # Convert Entrez to Hugo in data frame where we have probes collapsed to gene-level
-    
+    pathways <- pathways[grep('HSA', names(pathways))] # get pathways for homo sapiens
+    # Get data frame of expression values
     d <- as.data.frame(genes$datETcollapsed)
     d$entrez <- rownames(d)
+    # I take the first Entrez ID if there are multiple to make this simpler
     d$canon_entrez <- strsplit(d$entrez, split = '///') %>%
         purrr::map_chr(~ .[1])
-    # Get phenoData slot of the original ExpressionSet so we can map
-    # sample identifiers to treatments
+    
     pdata <- phenoData(eset)
-    pdata@data$sample_id <- rownames(pdata@data)# opinionated dplyr...
+    pdata@data$sample_id <- rownames(pdata@data)
     treatment_map <- pdata@data$title
     names(treatment_map) <- pdata@data$sample_id
 
     do_pathway_crosstalk <- function(d, enriched_pathways) {
         s <- list()
         for (pathway in unique(enriched_pathways$pathway)) { 
-            # Filter data frame 
+            # Filter data frame to genes in pathway
             to_keep <- which(d$canon_entrez %in% pathways[[pathway]])
             this_d <- d[to_keep,]
             # Get gene expression values in the pathway
@@ -85,7 +85,7 @@ pathwayCrosstalkParallel <- function(enriched_pathways, eset, processes=4) {
         this_matrix <- matrix(NA, nrow=length(names(s)),
                               ncol=length(names(s)))
         rownames(this_matrix) <- colnames(this_matrix) <- names(s)
-        # Create matrix with discrimination scores for the pathway pairs
+        # Create matrix with discriminating scores for the pathway pairs
         for (n in 1:nrow(this_matrix)) {
             for (m in 1:ncol(this_matrix)) {
                 if (m > n) {
@@ -101,10 +101,8 @@ pathwayCrosstalkParallel <- function(enriched_pathways, eset, processes=4) {
     }
     
     sample_data <- purrr::map(names(treatment_map), ~ d[,c(., 'entrez', 'canon_entrez')])
-    # do_pathway_crosstalk(sample_data[[1]], enriched_pathways)
     res <- parallel::mclapply(sample_data, function(x) (do_pathway_crosstalk(x, enriched_pathways)),
                               mc.cores=processes)
     names(res) <- names(treatment_map)
-    
     return(res)
 }
