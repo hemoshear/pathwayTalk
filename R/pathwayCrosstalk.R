@@ -50,7 +50,7 @@ pathwayCrosstalk <- function(enriched_pathways, eset) {
 }
 
 
-#' Calculate matrix of discriminatory scores for pathway crosstalk
+#' Calculate matrix of discriminating scores for pathway crosstalk
 #' 
 #' @param enriched_pathways
 #' @param eset 
