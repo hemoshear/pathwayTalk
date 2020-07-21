@@ -1,9 +1,3 @@
-
-library(tidyverse)
-library(magrittr)
-library(limma)
-library(WGCNA)
-
 # https://www.rpubs.com/jlubieni/13450
 
 # purpose: a function to conduct differential expression analysis
@@ -16,7 +10,7 @@ library(WGCNA)
 
 # write function to do DEA ------------------------------------------------
 
-
+#' @export
 diffExpression <- function(data,
                            collapse_method,
                            gene_ids,
@@ -37,9 +31,9 @@ diffExpression <- function(data,
     data <- genes$datETcollapsed
 
     # fit linear model using provided design and contrast matrices
-    initial_fit <- lmFit(data, design_mat)
-    temp_fit <- contrasts.fit(initial_fit, contrast_mat)
-    fit <- eBayes(temp_fit)
+    initial_fit <- limma::lmFit(data, design_mat)
+    temp_fit <- limma::contrasts.fit(initial_fit, contrast_mat)
+    fit <- limma::eBayes(temp_fit)
 
     contrast_names <- colnames(contrast_mat)
 
@@ -52,7 +46,7 @@ diffExpression <- function(data,
 
         cont <- contrast_names[i]
 
-        results[[i]] <- topTable(fit, coef = i, number = Inf)
+        results[[i]] <- limma::topTable(fit, coef = i, number = Inf)
 
     }
 
