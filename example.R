@@ -69,8 +69,8 @@ for (i in 1:length(sig_pathways)) {
     sig_pathways[[i]]$subtype <- names(sig_pathways)[i]
 }
 sig_pathways %<>% dplyr::bind_rows()
-
 # Matrix where rows are pathway pairs and columns are samples
 ct <- pathwayCrosstalk(unique(sig_pathways$pathway),
                        genes, pathways,  processes=10)
+
 #saveRDS(ct_feature_matrix, 'inst/pathway_crosstalk_feature_matrix.RDS')

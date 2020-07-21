@@ -16,6 +16,7 @@ pathwayCrosstalk <- function(enriched_pathways, genes, pathways, processes=1) {
 
     # Get data frame of expression values
     d <- as.data.frame(genes$datETcollapsed)
+    sample_id <- colnames(d)
     d$entrez <- rownames(d)
     # I take the first Entrez ID if there are multiple to make this simpler
     d$canon_entrez <- strsplit(d$entrez, split = '///') %>%
@@ -41,7 +42,7 @@ pathwayCrosstalk <- function(enriched_pathways, genes, pathways, processes=1) {
         return(scores)
     }
 
-    sample_data <- purrr::map(colnames(d), ~ d[,c(., 'entrez', 'canon_entrez')])
+    sample_data <- purrr::map(sample_id, ~ d[,c(., 'entrez', 'canon_entrez')])
     # Calculate discriminating scores in parallel
     res <- parallel::mclapply(sample_data, function(x) (do_pathway_crosstalk(x, enriched_pathways)),
                               mc.cores=processes)
@@ -50,7 +51,7 @@ pathwayCrosstalk <- function(enriched_pathways, genes, pathways, processes=1) {
     # matrix with rows as pathway pairs and columns as df
     res <- purrr::map(res, ~ unlist(.))
     m <- do.call('cbind', res)
-    colnames(m) <- colnames(d)
+    colnames(m) <- sample_id
     rownames(m) <- pathway_pairs
     return(m)
 }
