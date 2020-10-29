@@ -15,21 +15,19 @@ library(caret)
 
 # this function works with an ExpressionSet with a lockedEnvironment storage mode
 
-# pre-processing completed prior to using function (normalization, removing control sequences, etc.)
+# pre-processing completed prior to using function
+    # (normalization, removing control sequences, log2 transformation, collapse to genes tc.)
 
 
 # write function to do DEA ------------------------------------------------
 
 #' @title Conduct differential gene expression analysis for a given gene expression dataset.
-#' @description Collapses probe-level expression to genes using collapseRows()
-#' from WGCNA, and calculates log2 fold-changes and associated p-values for a
+#' @description Calculates log2 fold-changes and associated p-values for a
 #' given matrix of gene expression data.
 #' @importFrom magrittr %>%
 #' @param data An expression matrix of intensity values for gene probes,
-#' where the row names are the probe identifiers.
-#' @param collapse_method Specifies the method by which the probes will be collapsed
-#' to gene expression. The default value is 'MaxMean'. See the WGCNA collapseRows()
-#' documentation for more options.
+#' where the row names are the probe identifiers. Pre-processing should be completed,
+#' including normalization, removing control sequences, log2 transformation, collapse to genes.
 #' @param gene_ids A vector of strings containing gene IDs corresponding to each row of the
 #' expression matrix.
 #' @param design_mat A matrix specifying the experimental design,
@@ -38,23 +36,9 @@ library(caret)
 #' with makeContrasts().
 #' @export
 diffExpression <- function(data,
-                           collapse_method = 'MaxMean',
                            gene_ids,
                            design_mat,
                            contrast_mat) {
-
-    # begin with log2 transformation of intensity values
-    data <- log2(data)
-
-    # collapse probe rows to genes
-    probes <- data
-
-    genes <- WGCNA::collapseRows(datET = probes,
-                                 rowGroup = gene_ids,
-                                 rowID = rownames(probes),
-                                 method = collapse_method)
-
-    data <- genes$datETcollapsed
 
     # fit linear model using provided design and contrast matrices
     initial_fit <- lmFit(data, design_mat)
