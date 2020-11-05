@@ -4,21 +4,12 @@
 \alias{diffExpression}
 \title{Conduct differential gene expression analysis for a given gene expression dataset.}
 \usage{
-diffExpression(
-  data,
-  collapse_method = "MaxMean",
-  gene_ids,
-  design_mat,
-  contrast_mat
-)
+diffExpression(data, gene_ids, design_mat, contrast_mat)
 }
 \arguments{
 \item{data}{An expression matrix of intensity values for gene probes,
-where the row names are the probe identifiers.}
-
-\item{collapse_method}{Specifies the method by which the probes will be collapsed
-to gene expression. The default value is 'MaxMean'. See the WGCNA collapseRows()
-documentation for more options.}
+where the row names are the probe identifiers. Pre-processing should be completed,
+including normalization, removing control sequences, log2 transformation, collapse to genes.}
 
 \item{gene_ids}{A vector of strings containing gene IDs corresponding to each row of the
 expression matrix.}
@@ -29,7 +20,6 @@ generated with model.matrix().
 with makeContrasts().}
 }
 \description{
-Collapses probe-level expression to genes using collapseRows()
-from WGCNA, and calculates log2 fold-changes and associated p-values for a
+Calculates log2 fold-changes and associated p-values for a
 given matrix of gene expression data.
 }

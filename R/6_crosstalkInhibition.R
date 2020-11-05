@@ -47,7 +47,7 @@ crosstalkInhibition <- function(networks_list){
         network_name <- names(networks_list)[i]
         network <- networks_list[[network_name]]
 
-        print(network_name)
+        # print(network_name)
 
         # initial network efficiency of the network
         NE <- networkEfficiency(network)

@@ -34,7 +34,7 @@ byPhenotype <- function(input_matrix, phenotypes, reference_condition){
     pairs <- c()
 
     for (subtype in names(pairs_index)){
-        print(subtype)
+        # print(subtype)
         index <- pairs_index[[subtype]]
         pairs[[subtype]] <- input_matrix[index,]
     }

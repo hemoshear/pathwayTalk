@@ -1,5 +1,6 @@
 library(magrittr)
 library(pathwayTalk)
+
 options(stringsAsFactors = FALSE)
 
 # step 0: data pre-processing ---------------------------------------------
@@ -21,14 +22,27 @@ norm_method_test <- 'quantile'
 # normalize using provided normalization method
 exprs(data) <- limma::normalizeBetweenArrays(exprs(data), method=norm_method_test)
 
+# log2 transformation of intensity values
+exprs(data) <- log2(exprs(data))
 
-# step 1: differential expression analysis  -------------------------------
+# select the expression matrix from the ExpressionSet data (probe-level)
+probes <- exprs(data)
+
+# generate vector of gene IDs:
+gene_ids <- data@featureData@data$ENTREZ_GENE_ID
 
 # select collapse method
 collapse_method <- 'MaxMean'
 
-# generate vector of gene IDs:
-gene_ids <- data@featureData@data$ENTREZ_GENE_ID
+# collapse probe rows to genes
+genes <- WGCNA::collapseRows(datET = probes,
+                             rowGroup = gene_ids,
+                             rowID = rownames(probes),
+                             method = collapse_method)
+
+processed_expression_data <- genes$datETcollapsed
+
+# step 1: differential expression analysis  -------------------------------
 
 # generate design and contrast matrices:
 design_mat <- model.matrix(~ 0 + data$title)
@@ -41,15 +55,11 @@ contrast_mat <- limma::makeContrasts(BCAT-GFP,
                               SRC-GFP,
                               levels = design_mat)
 
-# select the expression matrix from the ExpressionSet data
-expression_data <- exprs(data)
 
-DEG <- diffExpression(data = expression_data,
-                      collapse_method = collapse_method,
-                      gene_ids = gene_ids,
-                      design_mat = design_mat,
-                      contrast_mat = contrast_mat)
-
+DEG <- diffExpression(data = processed_expression_data,
+                    gene_ids = gene_ids,
+                    design_mat = design_mat,
+                    contrast_mat = contrast_mat)
 # ^ runtime: about 2 minutes
 
 # saveRDS(DEG, 'onco_DEA.RDS')
@@ -67,24 +77,28 @@ enriched <- fisherPathwayEnrichment(DEG, gene_alpha=0.001, pathway_alpha=0.001)
 #     # for now, define here:
 #
 # # # begin with log2 transformation of intensity values
-probes <- log2(exprs(data))
-#
-# # # collapse probe rows to genes
-genes <- WGCNA::collapseRows(datET = probes,
-                              rowGroup = gene_ids,
-                              rowID = rownames(probes),
-                              method = collapse_method)
 
-
+# Need a named vector that maps sample identifiers to treatment groups
 pdata <- phenoData(data)
 pdata@data$sample_id <- rownames(pdata@data)
 treatment_map <- pdata@data$title
 names(treatment_map) <- pdata@data$sample_id
-#
-# # ----
-#
+
+# Get data frame of expression values
+processed_expression_data %<>% as.data.frame()
+processed_expression_data$entrez_full <- rownames(processed_expression_data)
+# I take the first Entrez ID if there are multiple to make this simpler -- entrez is
+# a required column in this Data Frame
+processed_expression_data$entrez <- strsplit(processed_expression_data$entrez_full, split = '///') %>%
+    purrr::map_chr(~ .[1])
+
+# expr is not an argument to pathwayCrosstalk, but needs to be defined in the global environment.
+# This function runs orders of magnitude faster this way
+expr <- processed_expression_data
+
 # # Each element is a matrx of discriminating scores.
-ct_feature_matrix <- pathwayCrosstalkParallel(enriched, treatment_map, processes = 30)
+ct_feature_matrix <- pathwayCrosstalk(enriched, treatment_map,
+                                      processes = 4)
 
 
 # steps 4 and 5: classification and network construction -------------------------------
@@ -142,7 +156,6 @@ plot(networks[['E2F3']])
 plot(networks[['RAS']])
 
 
-
 # step 5b: characterize networks ------------------------------------------
 
 # purpose: characterize the vertices present in the pathways and export as xslx file
@@ -156,4 +169,6 @@ network_results <- characterizeNetworks(networks_list = networks)
 significant_crosstalks <- crosstalkInhibition(networks)
 final_results <- characterizeResults(significant_crosstalks)
 
+# MYC example
+final_results[['MYC']]
 

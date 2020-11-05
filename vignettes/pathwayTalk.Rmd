@@ -1,0 +1,286 @@
+---
+title: "pathwayTalk"
+subtitle: 'Workflow with microarray ExpressionSet data'
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{pathwayTalk}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>"
+)
+```
+
+The purpose of this document is to demonstrate the functionality of the pathwayTalk package, which is modeled after the workflow outlined in the publication below: 
+
+Cava, C, Bertoli, G, and Castiglioni, I. 2018. In silico identification of drug target pathways in breast cancer subtypes using pathway cross-talk inhibition. J Transl Med. https://translational-medicine.biomedcentral.com/track/pdf/10.1186/s12967-018-1535-2
+
+
+
+Here, our source data is a microarray ExpressionSet (GEO Series GSE3151) consisting of RNA expression profiles of 45 oncogene-positive samples, consisting of five distinct phenotypes (BCAT, E2F3, MYC, RAS, and SRC), and 10 control (GFP) samples. 
+
+Source: https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSE3151
+
+
+#### Import functions:
+
+```{r message = FALSE, warning=FALSE}
+source('../R/1_diffExpression.R') # diffExpression()
+source('../R/2_pathwayEnrichment.R') # fisherPathwayEnrichment()
+source('../R/3_pathwayCrosstalk.R') # pathwayCrosstalk(), pathwayCrosstalkParallel()
+source('../R/4_classification.R') # byPhenotype(), selectTopFeatures(), subtypeNetwork()
+source('../R/5_networkCharacterization.R') # characterizeNetworks()
+source('../R/6_crosstalkInhibition.R') # networkEfficiency(), crosstalkInhibition, characterizeResults()
+
+library(kableExtra)
+
+options(stringsAsFactors = FALSE)
+
+```
+
+#### Load data and complete pre-processing:
+
+```{r message = FALSE, warning=FALSE}
+data <- readRDS(file = '../onco_data.RDS')
+
+# trim sample id numbers from treatment groups:
+data$title <- gsub('\\-\\d+', '', data$title)
+data$title %<>% toupper()
+table(data$title)
+
+data$title %<>% factor() %>% relevel(ref = 'GFP')
+
+# select a normalization method
+norm_method_test <- 'quantile'
+# single channel: none, scale, quantile, cyclicloess
+# two-channel: above, plus Aquantile, Gquantile, Rquantile, Tquantile
+
+# normalize using provided normalization method
+exprs(data) <- normalizeBetweenArrays(exprs(data), method=norm_method_test)
+
+# log2 transformation of intensity values
+exprs(data) <- log2(exprs(data))
+
+# select the expression matrix from the ExpressionSet data (probe-level)
+probes <- exprs(data)
+
+# generate vector of gene IDs:
+gene_ids <- data@featureData@data$ENTREZ_GENE_ID
+
+# select collapse method
+collapse_method <- 'MaxMean'
+
+# collapse probe rows to genes
+genes <- WGCNA::collapseRows(datET = probes,
+                             rowGroup = gene_ids,
+                             rowID = rownames(probes),
+                             method = collapse_method)
+
+processed_expression_data <- genes$datETcollapsed
+
+```
+
+#### Step 1: Differential expression analysis with diffExpression():
+
+Conduct differential expression analysis for a given dataset. As written, 
+this function works with the expression matrix extracted from microarray ExpressionSet results. All pre-processing of the expression data (normalization, removing control sequences, log2 transformation, collapse to genes, etc.) should be completed prior to using function.
+
+
+```{r}
+# generate design and contrast matrices:
+design_mat <- model.matrix(~ 0 + data$title)
+colnames(design_mat) %<>% gsub('data\\$title', '', .)
+
+contrast_mat <- makeContrasts(BCAT-GFP,
+                                   E2F3-GFP,
+                                   MYC-GFP,
+                                   RAS-GFP,
+                                   SRC-GFP,
+                                   levels = design_mat)
+
+DEG <- diffExpression(data = processed_expression_data,
+                    gene_ids = gene_ids,
+                    design_mat = design_mat,
+                    contrast_mat = contrast_mat)
+```
+
+#### Step 2: Pathway enrichment analysis with fisherPathwayEnrichment():
+
+Complete pathway enrichment with Fisher's exact test.
+
+```{r}
+# do pathway enrichment with Fisher's exact test
+tests <- purrr::map(DEG, ~ fisherPathwayEnrichment(., alpha=0.001))
+# ^ runtime: about 2 minutes
+names(tests) <- names(DEG)
+
+# keep enriched pathways for each cancer subtype.
+sig_pathways <- purrr::map(tests, ~ dplyr::filter(., adj_p < 0.001))
+names(sig_pathways) %<>% gsub(' \\- GFP', '', .)
+
+purrr::map(sig_pathways, ~nrow(.)) 
+
+# create one data frame with enriched pathways across cancer subtypes
+for (i in 1:length(sig_pathways)) {
+    sig_pathways[[i]]$subtype <- names(sig_pathways)[i]
+}
+sig_pathways %<>% dplyr::bind_rows()
+
+count(sig_pathways, subtype) %>% kable
+
+```
+
+
+#### Step 3: Pathway crosstalk with pathwayCrosstalkParallel():
+
+Generate matrix of discrimination scores for pathway crosstalk.
+
+```{r}
+# # ----
+#
+# # need to add 'genes' for pathwayCrosstalkParallel?
+#     # currently only defined within the diffExpression function
+#     # for now, define here:
+#
+# # # begin with log2 transformation of intensity values
+# probes <- log2(exprs(data))
+#
+# # # collapse probe rows to genes
+# genes <- WGCNA::collapseRows(datET = probes,
+#                              rowGroup = gene_ids,
+#                              rowID = rownames(probes),
+#                              method = collapse_method)
+#
+# # ----
+#
+# # Each element is a matrx of discriminating scores.
+# ct <- pathwayCrosstalkParallel(sig_pathways, data)
+# # ^ runtime: > 10 minutes
+#
+# # Convert each matrix into a single vector and combine these to create a matrix
+# # where rows are pathway pairs and columns are samples.
+# ct_feature <- list()
+# matrix2vec <- function(m) {
+#     vec <- c()
+#     pathway_pair <- c()
+#     for (i in 1:nrow(m)) {
+#         for (j in 1:ncol(m)) {
+#             if (i > j) {
+#                 vec <- c(vec, m[i,j])
+#                 pathway_pair <- c(pathway_pair, paste0(rownames(m)[i], ',', colnames(m)[j]))
+#             }
+#         }
+#     }
+#
+#     names(vec) <- pathway_pair
+#     vec
+# }
+# for (rna_sample in 1:length(ct)) {
+#     ct_feature[[rna_sample]] <- matrix2vec(ct[[rna_sample]])
+# }
+#
+# ct_feature_matrix <- do.call('cbind', ct_feature)
+# rownames(ct_feature_matrix) <- names(ct_feature[[1]])
+# colnames(ct_feature_matrix) <- names(ct)
+
+# ct_feature_matrix will be input to classifier in next step
+
+# output: 
+ct_feature_matrix <- readRDS('../pathway_crosstalk_feature_matrix.RDS')
+```
+
+
+#### Steps 4 and 5: Classification and network construction with subtypeNetwork():
+
+Quantification of pathway cross-talk between pathways enriched with subtype-derived DEGs.
+
+```{r fig.align='center', out.width='70%', message=FALSE, warning=FALSE}
+ct_feature_matrix_t <- ct_feature_matrix %>% t() %>% data.frame()
+
+groups <- data$title # phenotypes
+
+# split feature matrix by subtype
+matrices_by_phenotype <- byPhenotype(input_matrix = ct_feature_matrix_t,
+                                     phenotypes = groups,
+                                     reference_condition = 'GFP')
+
+
+# generate networks for all subtypes - use subtypeNetwork()
+subtype_list <- names(matrices_by_phenotype$phenotypes)
+
+networks_by_subtype <- function(subtypes){
+
+    networks_list <- c()
+
+    for (subtype in subtypes) {
+
+        subtype_matrix <- matrices_by_phenotype$matrices[[subtype]]
+        subtype_phenotypes <- matrices_by_phenotype$phenotypes[[subtype]]
+
+        subtype_network <- subtypeNetwork(feature_matrix = subtype_matrix,
+                                          sample_phenotype = subtype_phenotypes,
+                                          alpha = 1,
+                                          lambda = 0.01,
+                                          output_graph = TRUE,
+                                          model_evaluation = FALSE)
+
+        subtype_graph <- subtype_network$graph
+        networks_list[[subtype]] <- subtype_graph
+
+    }
+
+    return(networks_list)
+}
+
+networks <- networks_by_subtype(subtype_list)
+
+# MYC example
+plot(networks[['MYC']], vertex.size=30, vertex.label.dist = 5, 
+     dpi=300, margin=c(0.5,0.5,0.5,0.5))
+
+```
+
+
+#### Characterize network output: 
+
+```{r message = FALSE, warning=FALSE}
+network_results <- characterizeNetworks(networks_list = networks)
+
+# MYC example
+network_results[['MYC']] %>% kable
+
+```
+
+
+#### Steps 6 and 7: Pathway crosstalk inhibition with crosstalkInhibition():
+
+Select the best discriminating pairs of crosstalking pathways.
+
+
+```{r message = FALSE, warning=FALSE}
+significant_crosstalks <- crosstalkInhibition(networks)
+
+# MYC example
+head(significant_crosstalks[['MYC']]) %>% kable
+
+```
+
+
+#### Characterize results
+
+```{r message = FALSE, warning=FALSE}
+final_results <- characterizeResults(significant_crosstalks)
+
+# MYC example
+myc <- final_results[['MYC']]
+top_myc <- myc[order(myc$PCI),] 
+rownames(top_myc) <- NULL
+top_myc %>% kable
+
+```
+
+
