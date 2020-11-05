@@ -1,13 +1,3 @@
-
-library(tidyverse)
-library(magrittr)
-library(Biobase)
-library(limma)
-library(WGCNA)
-library(gsap)
-library(caret)
-
-
 # https://www.rpubs.com/jlubieni/13450
 
 # purpose: a function to conduct differential expression analysis
@@ -57,9 +47,9 @@ diffExpression <- function(data,
     data <- genes$datETcollapsed
 
     # fit linear model using provided design and contrast matrices
-    initial_fit <- lmFit(data, design_mat)
-    temp_fit <- contrasts.fit(initial_fit, contrast_mat)
-    fit <- eBayes(temp_fit)
+    initial_fit <- limma::lmFit(data, design_mat)
+    temp_fit <- limma::contrasts.fit(initial_fit, contrast_mat)
+    fit <- limma::eBayes(temp_fit)
 
     contrast_names <- colnames(contrast_mat)
 
@@ -67,7 +57,7 @@ diffExpression <- function(data,
 
     for(i in 1:length(contrast_names)){
         cont <- contrast_names[i]
-        result <- topTable(fit, coef = i, number = Inf)
+        result <- limma::topTable(fit, coef = i, number = Inf)
         result$canon_entrez <- rownames(result) # added
         results[[i]] <- result
         # original: results[[i]] <- topTable(fit, coef = i, number = Inf)

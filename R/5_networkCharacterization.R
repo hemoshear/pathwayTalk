@@ -1,17 +1,6 @@
 # extension of step 4: classification and network generation  --------------------------------------------------
 # Taylor Derby Pourtaheri
 
-library(Biobase)
-library(reactome.db)
-library(caret)
-library(tidyverse)
-library(magrittr)
-library(glmnet)
-library(msigdbr)
-library(igraph)
-library(reactome.db)
-
-
 #' @title Characterize reactome pathway networks.
 #' @description Saves xlsx files containing the common names for Reactome pathways
 #' # representing nodes in a given pathway network.
@@ -37,7 +26,7 @@ characterizeNetworks <- function(networks_list, output_dir = NULL){
         network <- networks_list[[i]]
 
         v_list <- igraph::as_data_frame(network, 'vertices')
-        v_list %<>% left_join(rpathways_df)
+        v_list %<>% dplyr::left_join(rpathways_df)
 
         # openxlsx::write.xlsx(v_list, glue::glue('{`output_dir`}/{`subtype`}_summary.xlsx'))
 

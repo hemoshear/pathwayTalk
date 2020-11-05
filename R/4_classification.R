@@ -1,13 +1,6 @@
 
 # step 4: classification and network generation  --------------------------------------------------
 
-library(Biobase)
-library(reactome.db)
-library(caret)
-library(tidyverse)
-library(magrittr)
-library(glmnet)
-
 # phenotype splitting function --------------------------------------------
 
 #' @title Outputs list of matrices, each containing samples from a single disease phenotype
@@ -118,12 +111,12 @@ subtypeNetwork <- function(feature_matrix, sample_phenotype, alpha = 1, lambda =
         full_data$phenotype <- factor(sample_phenotype)
         # full_data <- as.matrix(full_data)
 
-        train_control <- trainControl(method = "cv",
+        train_control <- caret::trainControl(method = "cv",
                                       number = 10,
                                       savePredictions = TRUE,
                                       classProbs = TRUE)
 
-        lasso_model <- train(phenotype ~ .,
+        lasso_model <- caret::train(phenotype ~ .,
                              data = full_data,
                              method = 'glmnet',
                              family = 'binomial',
@@ -139,7 +132,7 @@ subtypeNetwork <- function(feature_matrix, sample_phenotype, alpha = 1, lambda =
     if (output_graph){
 
         # fit glmnet model
-        model <- glmnet(x = feature_matrix, y = sample_phenotype, family = 'binomial',
+        model <- glmnet::glmnet(x = feature_matrix, y = sample_phenotype, family = 'binomial',
                         alpha = alpha, lambda = lambda)
         sort(abs(model$beta), decreasing = TRUE)
 
@@ -159,8 +152,8 @@ subtypeNetwork <- function(feature_matrix, sample_phenotype, alpha = 1, lambda =
         # generate dataframe of top-performing pathway pairs for 'edges' in network
         coefs <- data.frame(pathways_pairs, values)
 
-        coefs$pathway1 <- str_extract(string = coefs$pathways_pairs, pattern = '^R.HSA.\\d+')
-        coefs$pathway2 <- str_extract(string = coefs$pathways_pairs, pattern = 'R.HSA.\\d+$')
+        coefs$pathway1 <- stringr::str_extract(string = coefs$pathways_pairs, pattern = '^R.HSA.\\d+')
+        coefs$pathway2 <- stringr::str_extract(string = coefs$pathways_pairs, pattern = 'R.HSA.\\d+$')
 
         edges <- as.matrix(coefs[c('pathway1', 'pathway2')])
 
@@ -196,9 +189,9 @@ subtypeNetwork <- function(feature_matrix, sample_phenotype, alpha = 1, lambda =
         test_y %<>% factor
 
         # evaluating with assess.glmnet:
-        a <- assess.glmnet(model, newx = test_x, newy = test_y, family = 'binomial')
-        c <- confusion.glmnet(model, newx = test_x, newy = test_y, family = 'binomial')
-        r <- roc.glmnet(model, newx = test_x, newy = test_y, family = 'binomial')
+        a <- glmnet::assess.glmnet(model, newx = test_x, newy = test_y, family = 'binomial')
+        c <- glmnet::confusion.glmnet(model, newx = test_x, newy = test_y, family = 'binomial')
+        r <- glmnet::roc.glmnet(model, newx = test_x, newy = test_y, family = 'binomial')
 
         output_list[['model_evaluation_metrics']] <- a
         output_list[['modelconfusion_matrix']] <- c

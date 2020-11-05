@@ -9,14 +9,28 @@ Description: More about what it does (maybe more than one line)
 License: What license is it under?
 Encoding: UTF-8
 LazyData: true
-RoxygenNote: 7.0.2
+RoxygenNote: 7.1.1
 Suggests: 
     knitr,
     rmarkdown
 VignetteBuilder: knitr
+Additional_repositories:
+    https://github.com/hemoshear/gsap
+    https://bioconductor.org/packages/3.8/bioc
 Imports: 
     magrittr,
     purrr,
     limma,
     gtools,
-    dplyr
+    dplyr,
+    gsap,
+    reactome.db,
+    mgcv,
+    stringr,
+    reshape2,
+    Biobase,
+    caret,
+    glmnet,
+    msigdbr,
+    igraph,
+    tibble

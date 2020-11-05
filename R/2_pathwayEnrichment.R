@@ -3,20 +3,19 @@
 #' Do pathway enrichment with Fisher's exact test
 #'
 #' @param deg diffExpression --> entrez_to_hgnc
-#' @param alpha numeric vector indicating significance level
+#' @param gene_alpha numeric vector indicating significance level for genes.
 #' @return data frame of results for the Fisher's exact tests.
 #'     `p` Unadjusted p-value
-#'     `conf_int_lb` Lower bound of odds ratio estimate
-#'     `conf_int_ub` Upper bound of odds ratio estimate
+#'     `adj_p` FDR adjusted p-value
 #'     `estimate` odds ratio point estimate
 #'     `pathway` Paste of Reactome pathway identifier and description.
 #' @export
 
-fisherPathwayEnrichment <- function(deg, alpha) {
+.fisherPathwayEnrichment <- function(deg, gene_alpha) {
     pathways <- as.list(reactome.db::reactomePATHID2EXTID)
     pathways <- pathways[grep('HSA', names(pathways))]
-    sig <- deg %>% dplyr::filter(adj.P.Val < alpha)
-    nonsig <- deg %>% dplyr::filter(adj.P.Val >= alpha)
+    sig <- deg %>% dplyr::filter(adj.P.Val < gene_alpha)
+    nonsig <- deg %>% dplyr::filter(adj.P.Val >= gene_alpha)
 
     # Enumerate contingency table, this can be cleaned up a lot.
     sig_in_pathway <- purrr::map(
@@ -46,4 +45,35 @@ fisherPathwayEnrichment <- function(deg, alpha) {
     }
     dplyr::bind_rows(fisher) %>%
         dplyr::arrange(p)
+}
+
+
+#' @param importFrom magrittr %<>%
+#' @param gene_alpha Significance level for genes. Genes with a differential expression
+#'  p-value less than `gene_alpha` will be labeled as differentially expressed for the purpose
+#'  doing a Fisher's exact test for pathway enrichment.
+#' @param pathway_alpha Significance level for pathways. Pathways where the Fisher's exact
+#'  test p-value is less than `pathway_alpha` will be labeled as enriched for the purposes
+#'  of downstream analyses. Pathways with a p-value greater than or equal to `pathway_alpha`
+#'  will be returned.
+#' @return data frame of results for the Fisher's exact tests.
+#'     `p` Unadjusted p-value
+#'     `adj_p` FDR adjusted p-value
+#'     `estimate` odds ratio point estimate
+#'     `pathway` Paste of Reactome pathway identifier and description.
+#'     `contrast` Character vector representing contrasts.
+#' @export
+
+fisherPathwayEnrichment <- function(deg, gene_alpha, pathway_alpha) {
+    tests <- purrr::map(deg, ~ .fisherPathwayEnrichment(., gene_alpha=gene_alpha))
+    names(tests) <- names(DEG)
+    # keep enriched pathways for each cancer subtype.
+    sig_pathways <- purrr::map(tests, ~ dplyr::filter(., adj_p < pathway_alpha))
+    # create one data frame with enriched pathways across cancer subtypes
+    for (i in 1:length(sig_pathways)) {
+        sig_pathways[[i]]$contrast <- names(sig_pathways)[i]
+    }
+    sig_pathways %<>% dplyr::bind_rows()
+    sig_pathways
+
 }

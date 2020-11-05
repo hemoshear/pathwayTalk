@@ -1,17 +1,6 @@
 
 # step 6: network efficiency and cross-talk inhibition  --------------------------------------------------
 
-library(Biobase)
-library(reactome.db)
-library(caret)
-library(tidyverse)
-library(magrittr)
-library(glmnet)
-library(reshape2)
-library(gtools)
-library(mgcv)
-library(stringr)
-
 
 networkEfficiency <- function(network){
 
