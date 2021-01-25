@@ -33,7 +33,7 @@ diffExpression <- function(data,
     # fit linear model using provided design and contrast matrices
     initial_fit <- limma::lmFit(data, design_mat)
     temp_fit <- limma::contrasts.fit(initial_fit, contrast_mat)
-    fit <- limma::eBayes(temp_fit)
+    fit <- limma::eBayes(temp_fit, robust = TRUE, trend = TRUE) # robust, trend
 
     contrast_names <- colnames(contrast_mat)
 

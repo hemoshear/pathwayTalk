@@ -14,8 +14,8 @@
 .fisherPathwayEnrichment <- function(deg, gene_alpha) {
     pathways <- as.list(reactome.db::reactomePATHID2EXTID)
     pathways <- pathways[grep('HSA', names(pathways))]
-    sig <- deg %>% dplyr::filter(adj.P.Val < gene_alpha)
-    nonsig <- deg %>% dplyr::filter(adj.P.Val >= gene_alpha)
+    sig <- deg %>% dplyr::filter(P.Value < gene_alpha)
+    nonsig <- deg %>% dplyr::filter(P.Value >= gene_alpha)
 
     # Enumerate contingency table, this can be cleaned up a lot.
     sig_in_pathway <- purrr::map(
@@ -67,8 +67,10 @@
 fisherPathwayEnrichment <- function(deg, gene_alpha, pathway_alpha) {
     tests <- purrr::map(deg, ~ .fisherPathwayEnrichment(., gene_alpha=gene_alpha))
     names(tests) <- names(DEG)
+
     # keep enriched pathways for each cancer subtype.
     sig_pathways <- purrr::map(tests, ~ dplyr::filter(., adj_p < pathway_alpha))
+
     # create one data frame with enriched pathways across cancer subtypes
     for (i in 1:length(sig_pathways)) {
         sig_pathways[[i]]$contrast <- names(sig_pathways)[i]

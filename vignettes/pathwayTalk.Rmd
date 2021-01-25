@@ -29,14 +29,31 @@ Source: https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSE3151
 #### Import functions:
 
 ```{r message = FALSE, warning=FALSE}
-source('../R/1_diffExpression.R') # diffExpression()
-source('../R/2_pathwayEnrichment.R') # fisherPathwayEnrichment()
-source('../R/3_pathwayCrosstalk.R') # pathwayCrosstalk(), pathwayCrosstalkParallel()
-source('../R/4_classification.R') # byPhenotype(), selectTopFeatures(), subtypeNetwork()
-source('../R/5_networkCharacterization.R') # characterizeNetworks()
-source('../R/6_crosstalkInhibition.R') # networkEfficiency(), crosstalkInhibition, characterizeResults()
+# source('../R/1_diffExpression.R') # diffExpression()
+# source('../R/2_pathwayEnrichment.R') # fisherPathwayEnrichment()
+# source('../R/3_pathwayCrosstalk.R') # pathwayCrosstalk(), pathwayCrosstalkParallel()
+# source('../R/4_classification.R') # byPhenotype(), selectTopFeatures(), subtypeNetwork()
+# source('../R/5_networkCharacterization.R') # characterizeNetworks()
+# source('../R/6_crosstalkInhibition.R') # networkEfficiency(), crosstalkInhibition, characterizeResults()
 
 library(kableExtra)
+library(magrittr)
+library(purrr)
+library(limma)
+library(gtools)
+library(dplyr)
+library(gsap)
+library(reactome.db)
+library(mgcv)
+library(stringr)
+library(reshape2)
+library(Biobase)
+library(caret)
+library(glmnet)
+library(msigdbr)
+library(igraph)
+library(tibble)
+library(pathwayTalk)
 
 options(stringsAsFactors = FALSE)
 
