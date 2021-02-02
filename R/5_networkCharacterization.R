@@ -13,7 +13,7 @@ characterizeNetworks <- function(networks_list, output_dir = NULL){
 
     # using reactome.db:
     rpathways <- as.list(reactome.db::reactomePATHNAME2ID)
-    rpathways_df <- tibble::enframe(rpathways) %>% unnest
+    rpathways_df <- tibble::enframe(rpathways) # %>% unnest
     colnames(rpathways_df) <- c('pathway_name', 'name')
     rpathways_df <- rpathways_df[grepl('HSA', rpathways_df$name),]
     rpathways_df$name %<>% gsub('\\-', '\\.', .)

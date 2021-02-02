@@ -136,8 +136,9 @@ subtypeNetwork <- function(feature_matrix, sample_phenotype, alpha = 1, lambda =
                         alpha = alpha, lambda = lambda)
         sort(abs(model$beta), decreasing = TRUE)
 
-        # identify top pathway pairs
-        keeps <- which(model$beta != 0) + 1 # these indices offset by 1
+        # identify top pathway pairs (non-zero coefficients)
+        coef_matrix <- as.matrix(abs(model$beta))
+        keeps <- which(coef_matrix != 0) + 1 # these indices offset by 1
 
         # ridge regression: only return top 15 pathway pairs
         if (alpha != 1){

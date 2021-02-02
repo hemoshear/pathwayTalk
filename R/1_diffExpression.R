@@ -26,7 +26,6 @@
 #' with makeContrasts().
 #' @export
 diffExpression <- function(data,
-                           gene_ids,
                            design_mat,
                            contrast_mat) {
 

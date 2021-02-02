@@ -5,8 +5,10 @@
 networkEfficiency <- function(network){
 
     # shortest path lengths between all nodes
-    paths <- igraph::shortest.paths(network)
-    paths_df <- setNames(melt(paths), c('V1', 'V2', 'path_length'))
+    paths <- data.frame(igraph::shortest.paths(network))
+    paths$pathway <- rownames(paths)
+    paths_df <- setNames(tidyr::pivot_longer(paths, -pathway),
+                         c('V1', 'V2', 'path_length'))
 
     # select only unique combinations, remove self-references
     paths_df %<>% filter(V1 != V2)
@@ -17,8 +19,9 @@ networkEfficiency <- function(network){
     paths_df$V2 %<>% as.character
 
     for (i in 1:nrow(paths_df)){
-        sorted <- mixedsort(c(paths_df[i, 'V1'], paths_df[i, 'V2']))
-        pasted <- paste(sorted, sep = '|')
+        these_paths <- as.character(c(paths_df[i, 'V1'], paths_df[i, 'V2']))
+        sorted <- gtools::mixedsort(these_paths)
+        pasted <- paste(sorted[1], sorted[2], sep = '|')
         pairs[i] <- pasted
     }
 
@@ -28,7 +31,7 @@ networkEfficiency <- function(network){
     paths_df %<>% filter(!(is.infinite(path_length)))
 
     # number of nodes in the network
-    N <- as.numeric(length(V(network)))
+    N <- as.numeric(length(igraph::V(network)))
 
     # calculate network efficiency
     NE <- (sum(1/paths_df$path_length)) / (N*(N-1))
@@ -93,7 +96,7 @@ characterizeResults <- function(sig_crosstalks_results, output_dir = NULL){
 
     # using reactome.db:
     rpathways <- as.list(reactome.db::reactomePATHNAME2ID)
-    rpathways_df <- tibble::enframe(rpathways) %>% unnest
+    rpathways_df <- tibble::enframe(rpathways) # %>% unnest
     colnames(rpathways_df) <- c('pathway_name', 'name')
     rpathways_df <- rpathways_df[grepl('HSA', rpathways_df$name),]
     rpathways_df$name %<>% gsub('\\-', '\\.', .)
@@ -111,7 +114,7 @@ characterizeResults <- function(sig_crosstalks_results, output_dir = NULL){
         for (j in 1:length(pathways)){
 
             pathway_pair <- names(pathways)[j]
-            pathway_pair_split <-  unlist(str_split(pathway_pair, '\\|'))
+            pathway_pair_split <-  unlist(strsplit(pathway_pair, '\\|'))
 
             pathway1 <- pathway_pair_split[1]
             pathway2 <- pathway_pair_split[2]

@@ -1,7 +1,10 @@
 library(magrittr)
 library(dplyr)
+library(tidyr)
+library(gtools)
 library(GEOquery)
 library(Rsubread)
+library(igraph)
 library(limma)
 library(edgeR)
 library(pathwayTalk)
@@ -13,7 +16,7 @@ options(stringsAsFactors = FALSE)
 # data import ----------------------------------------------------
 
 # import expression data file (BDG FBX experiment, courtesy of ML)
-exp_list <- readRDS('BDG0202_1.experiment_data.RDS')
+exp_list <- readRDS('data/BDG0202_1.experiment_data.RDS')
 
 meta <- exp_list[['metadata']]
 counts <- exp_list[['gene_counts']]
@@ -23,13 +26,16 @@ contrast_list <- exp_list[['contrast_list']]
 # View(counts[1:10, 1:10])
 # rows are genes, columns are samples
 
-# subset contrasts to comparisons to VEH-DMSO-ICS
-contrast_list <- contrast_list[1:11]
 
-# # select only samples from main waveform treatment (ICS)
-# meta %<>% filter(waveform == 'ICS')
-# ids <- unique(meta$ea_code) %>% as.character
-# counts <- counts[,ids]
+# select certain cell type (SMCs) and waveform (ICS)
+meta %<>% filter(cell_type == 'SMC'  & waveform == 'ICS')
+ids <- unique(meta$ea_code) %>% as.character
+cols <- colnames(counts) %in% ids
+counts <- counts[,cols]
+
+unique(meta$treatment_label)
+
+contrast_list <- contrast_list[c(2,3,4,5,6,7,8,9,11)]
 
 # step 00: data pre-processing ---------------------------------------------
 
@@ -48,8 +54,9 @@ dge <- DGEList(counts = counts, samples = xref, group = xref$treatment_label)
 # generate design matrix:
 levels(dge$samples$group)
 
-controls <- c('VEH_NaOH', 'VEH_DMSO_ICS', 'VEH_DMSO_CCA')
+controls <- c('VEH_NaOH', 'VEH_DMSO_ICS')
 tx_levels <- levels(dge$samples$group) %>% setdiff(controls) %>% c(controls,.)
+dge$samples$treatment_label %<>% factor(levels = tx_levels)
 
 design_mat <- model.matrix(~ 0 + dge$samples$treatment_label)
 colnames(design_mat) %<>% gsub('dge\\$samples\\$treatment_label', '', .)
@@ -59,7 +66,7 @@ rownames(design_mat) <- dge$samples$ea_code
 nrow(dge$counts) # 19,756
 keep <- filterByExpr(dge$counts, design_mat)
 dge <- dge[keep,,keep.lib.sizes=FALSE]
-nrow(dge$counts) # 15,075
+nrow(dge$counts) # 14,386
 
 # scale normalization with the TMM method
 # "TMM normalization is applied to this dataset to account for
@@ -104,6 +111,7 @@ dge <- calcNormFactors(dge)
 # voom transformation
 v <- voom(dge, design_mat, plot = TRUE, span = 1)
 
+
 # "If the data are very noisy, one can apply the same between-array
 # normalization methods as would be used for microarrays, for example:"
 # v_norm <- voom(dge, design_mat, plot=FALSE, normalize="quantile")
@@ -114,38 +122,19 @@ contrast_mat <- limma::makeContrasts(contrasts = contrast_list,
 
 # after using voom, the dge object is compatible with limma
 
-# use local version of diffExpression()
+# use local version of diffExpression() - new arguments to ebayes
 source('R/1_diffExpression.R')
 
 DEG <- diffExpression(data = v,
-                      gene_ids = gene_ids,
                       design_mat = design_mat,
                       contrast_mat = contrast_mat)
 
 
-# alternative: DEA with edgeR (negative binomial)  ----------------------
-
-# # calculate dispersions - trended is the default
-# # "edgeR uses the Cox-Reid profile-adjusted likelihood (CR) method in estimating dispersions"
-# dge <- estimateGLMTrendedDisp(dge, design_mat)
-#
-# fit <- glmQLFit(dge, design_mat)
-#
-# qlf.2vs1 <- glmQLFTest(fit, coef=2)
-# topTags(qlf.2vs1)
-#
-# # QL (quasi-likelihood) dispersions visualization:
-# pdf("results/RNAseq/QLdisp.pdf", width = 15, height = 20)
-# plotQLDisp(fit)
-# dev.off()
-#
-# topTags(qlf.2vs1)
-#
-# # enriched <- fisherPathwayEnrichment(DEG, gene_alpha=0.01, pathway_alpha=0.001)
-
 # step 2: pathway enrichment analysis -------------------------------------
 
 # some contrasts are showing no enriched pathways - need to address this in the function
+
+names(DEG)
 
 hist(DEG[[1]]$P.Value)
 hist(DEG[[2]]$P.Value)
@@ -156,18 +145,11 @@ hist(DEG[[6]]$P.Value)
 hist(DEG[[7]]$P.Value)
 hist(DEG[[8]]$P.Value)
 hist(DEG[[9]]$P.Value)
-hist(DEG[[10]]$P.Value)
-hist(DEG[[11]]$P.Value)
 
-# DEG[['ALP_50-VEH_DMSO_ICS']] <- NULL
-# DEG[['FBX_10-VEH_DMSO_ICS']] <- NULL
-# DEG[['OXP_50-VEH_DMSO_ICS']] <- NULL
-# DEG[['OXP_500-VEH_DMSO_ICS']] <- NULL
-# DEG[['TMX_10-VEH_DMSO_ICS']] <- NULL
-# DEG[['TPS_10-VEH_DMSO_ICS']] <- NULL
+# DEG[3:4] <- NULL
 
-gene_alpha <- 0.05
-pathway_alpha <- 0.05
+gene_alpha <- 0.01
+pathway_alpha <- 0.01
 
 # local function definition
 source('R/2_pathwayEnrichment.R')
@@ -177,8 +159,11 @@ enriched <- fisherPathwayEnrichment(DEG, gene_alpha=gene_alpha,
                                     pathway_alpha=pathway_alpha)
 
 # replace infinite values
-fix <- which(is.infinite(enriched$estimate))
-enriched$estimate[fix] <- 100
+# fix <- which(is.infinite(enriched$estimate))
+# enriched$estimate[fix] <- 100
+
+sum(is.infinite(enriched$estimate))
+enriched %<>% filter(!is.infinite(estimate))
 
 # step 3: pathway crosstalk -----------------------------------------------
 
@@ -197,11 +182,10 @@ expr <- counts
 
 # # Each element is a matrx of discriminating scores.
 ct_feature_matrix <- pathwayCrosstalk(enriched, treatment_map,
-                                      processes = 4)
+                                      processes = 6)
 
-
-# getting lots of NAs here - may be due to infinite values in enriched estimates?
-# does not appear to be the case
+# check for NAs
+sum(is.na(ct_feature_matrix))
 
 
 # steps 4 and 5: classification and network construction -------------------------------
@@ -223,7 +207,10 @@ matrices_by_phenotype <- byPhenotype(input_matrix = ct_feature_matrix,
 
 
 # generate networks for all subtypes - use subtypeNetwork()
-subtype_list <- names(matrices_by_phenotype$phenotypes)
+subtype_list <- as.character(purrr::map(strsplit(names(DEG), '-'), ~.[1]))
+
+# source local classification function - fixed non-zero coef selection (which)
+source('R/4_classification.R')
 
 networks_by_subtype <- function(subtypes){
 
@@ -251,28 +238,48 @@ networks_by_subtype <- function(subtypes){
 
 networks <- networks_by_subtype(subtype_list)
 
-plot(networks[['TPS_100']])
-plot(networks[['FBX_100']])
-plot(networks[['TMX_100']])
-plot(networks[['OXP_500']])
-plot(networks[['OXP_500']])
+plot(networks[[1]])
+plot(networks[[2]])
+plot(networks[[3]])
+plot(networks[[4]])
+plot(networks[[5]])
+plot(networks[[6]])
+plot(networks[[7]])
 
 
 # step 5b: characterize networks ------------------------------------------
 
 # purpose: characterize the vertices present in the pathways and export as xslx file
 
+source('R/5_networkCharacterization.R')
+# unnest not found > removed
+
 network_results <- characterizeNetworks(networks_list = networks)
 
 # step 6: pathway crosstalk inhibition ------------------------------------
+
+source('R/6_crosstalkInhibition.R')
+# melt not found > gather
+# issues with mixedsort as well
+
 
 # purpose: select the best discriminating pairs of crosstalking pathways
 
 significant_crosstalks <- crosstalkInhibition(networks)
 final_results <- characterizeResults(significant_crosstalks)
 
-# MYC example
-final_results[['MYC']]
+
+names(final_results)
+
+final_results[['FBX_10']] %>% View
+
+final_results[['FBX_10']]$pathway_names
+final_results[['FBX_100']]$pathway_names
+final_results[['TMX_10']]$pathway_names
+final_results[['TMX_100']]$pathway_names
+final_results[['TPS_10']]$pathway_names
+final_results[['TPS_100']]$pathway_names
+final_results[['VEH_NaOH']]$pathway_names
 
 
 
