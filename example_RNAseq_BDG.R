@@ -73,6 +73,13 @@ nrow(dge$counts) # 14,386
 # compositional difference between the libraries."
 dge <- calcNormFactors(dge)
 
+# save RDS files for use in development down the line
+# saveRDS(dge$counts, 'data/wrapper_dev_data/processed_BDG_expression_mat.RDS')
+
+# save treatment condition metadata
+# temp <- dge$samples
+# temp$ea_code <- rownames(temp)
+# saveRDS(temp[,c('ea_code', 'group')], 'data/wrapper_dev_data/processed_BDG_groups.RDS')
 
 # step 0: data exploration --------------------------------------------------------
 
@@ -130,6 +137,7 @@ DEG <- diffExpression(data = v,
                       contrast_mat = contrast_mat)
 
 
+
 # step 2: pathway enrichment analysis -------------------------------------
 
 # some contrasts are showing no enriched pathways - need to address this in the function
@@ -148,8 +156,12 @@ hist(DEG[[9]]$P.Value)
 
 # DEG[3:4] <- NULL
 
+# save a contrast for wrapper development
+# saveRDS(DEG, 'data/wrapper_dev_data/processed_BDG_DEGs.RDS')
+
 gene_alpha <- 0.01
 pathway_alpha <- 0.01
+
 
 # local function definition
 source('R/2_pathwayEnrichment.R')
@@ -164,6 +176,9 @@ enriched <- fisherPathwayEnrichment(DEG, gene_alpha=gene_alpha,
 
 sum(is.infinite(enriched$estimate))
 enriched %<>% filter(!is.infinite(estimate))
+
+# save a contrast for wrapper development
+# saveRDS(enriched, 'data/wrapper_dev_data/processed_BDG_EPs.RDS')
 
 # step 3: pathway crosstalk -----------------------------------------------
 
