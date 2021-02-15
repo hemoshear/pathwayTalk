@@ -3,17 +3,19 @@
 #' Do pathway enrichment with Fisher's exact test
 #'
 #' @param deg diffExpression --> entrez_to_hgnc
-#' @param gene_alpha numeric vector indicating significance level for genes.
-#' @return data frame of results for the Fisher's exact tests.
+#' @param pathways A list in which each element is a named list of entrez gene IDs
+#' corresponding to a particular pathway.
+#' @param gene_alpha A numeric vector indicating significance level for genes.
+#' @return A data frame of results for the Fisher's exact tests.
 #'     `p` Unadjusted p-value
 #'     `adj_p` FDR adjusted p-value
 #'     `estimate` odds ratio point estimate
 #'     `pathway` Paste of Reactome pathway identifier and description.
 #' @export
 
-.fisherPathwayEnrichment <- function(deg, gene_alpha) {
-    pathways <- as.list(reactome.db::reactomePATHID2EXTID)
-    pathways <- pathways[grep('HSA', names(pathways))]
+.fisherPathwayEnrichment <- function(deg, pathways, gene_alpha) {
+    # pathways <- as.list(reactome.db::reactomePATHID2EXTID)
+    # pathways <- pathways[grep('HSA', names(pathways))]
     sig <- deg %>% dplyr::filter(P.Value < gene_alpha)
     nonsig <- deg %>% dplyr::filter(P.Value >= gene_alpha)
 

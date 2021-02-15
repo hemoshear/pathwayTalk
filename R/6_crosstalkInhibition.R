@@ -77,8 +77,12 @@ crosstalkInhibition <- function(networks_list){
 
                 percent_change <- ((nNE - NE) / NE) * 100
                 significant_crosstalks[edge] <- percent_change
+
             }
         }
+
+        significant_crosstalks <- as.data.frame(significant_crosstalks)
+        colnames(significant_crosstalks) <- 'PCI'
 
         results[[network_name]] <- significant_crosstalks
     }

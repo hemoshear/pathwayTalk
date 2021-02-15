@@ -89,7 +89,7 @@ selectTopFeatures <- function(input_matrix, n_top_features = 20000){
 #' @param feature_matrix A matrix of discriminating scores for pathway pairs,
 #' where each row represents a sample and each columns is a pair of pathways.
 #' #' The matrix should include samples from the reference condition and one disease phenotype.
-#' @param sample_phenotype A vector of strings containing the phenotype associated with each sample.
+#' @param groups A dataframe containing the sample identifiers and associated treatment conditions.
 #' Must be the same length as the number of rows in the feature_matrix input.
 #' @param alpha The alpha value applied to the glmnet classification model.
 #' Use alpha = 1 for lasso regression and alpha = 0 for ridge regression.
@@ -97,19 +97,25 @@ selectTopFeatures <- function(input_matrix, n_top_features = 20000){
 #' @param output_graph Logical. If TRUE, the function outputs the graph object.
 #' @param model_evaluation Logical. If TRUE, the function outputs the model evaluation metrics.
 #' @export
-subtypeNetwork <- function(feature_matrix, sample_phenotype, alpha = 1, lambda = 'best',
+subtypeNetwork <- function(feature_matrix, groups, alpha = 1, lambda = 'best',
                             output_graph = TRUE, model_evaluation = FALSE){
 
+    matrix_sample_ids <- rownames(feature_matrix)
+    ordered_group_vector <- groups[match(matrix_sample_ids, groups$sample_id), 'group'] %>%
+        as.character
+
     feature_matrix <- as.matrix(feature_matrix)
-    sample_phenotype <- as.matrix(sample_phenotype)
+
+    sample_phenotype <- ordered_group_vector
+    sample_phenotype <- as.matrix(ordered_group_vector)
 
     output_list <- list()
 
     if (lambda == 'best'){
 
-        full_data <- data.frame(feature_matrix)
+        full_data <- as.data.frame(feature_matrix)
+
         full_data$phenotype <- factor(sample_phenotype)
-        # full_data <- as.matrix(full_data)
 
         train_control <- caret::trainControl(method = "cv",
                                       number = 10,
@@ -161,9 +167,13 @@ subtypeNetwork <- function(feature_matrix, sample_phenotype, alpha = 1, lambda =
         # generate graph
         graph <- igraph::graph_from_edgelist(edges, directed = FALSE)
 
-        output_list[['graph']] <- graph
+        # generate dataframe
+        df <- igraph::as_data_frame(graph)
+
         output_list[['alpha']] <- alpha
         output_list[['lambda']] <- lambda
+        output_list[['graph']] <- graph
+        output_list[['dataframe']] <- df
 
         return(output_list)
 

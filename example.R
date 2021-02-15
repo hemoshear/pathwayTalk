@@ -1,11 +1,18 @@
 library(magrittr)
-library(pathwayTalk)
+# library(pathwayTalk)
+
+source('R/1_diffExpression.R')
+source('R/2_pathwayEnrichment.R')
+source('R/3_pathwayCrosstalk.R')
+source('R/4_classification.R')
+source('R/5_networkCharacterization.R')
+source('R/6_crosstalkInhibition.R')
 
 options(stringsAsFactors = FALSE)
 
 # step 0: data pre-processing ---------------------------------------------
 
-data <- readRDS(file = 'onco_data.RDS')
+data <- readRDS(file = 'data/onco_data.RDS')
 
 # trim sample id numbers from treatment groups:
 data$title <- gsub('\\-\\d+', '', data$title)
