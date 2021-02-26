@@ -1,6 +1,18 @@
-
-# step 6: network efficiency and cross-talk inhibition  --------------------------------------------------
-
+#' @title Conduct simulated network crosstalk inhibition and prune network.
+#' @description Given a network, calculate the network efficiency. Iterate over
+#' network edges and conduct simulated network crosstalk inhibition, pruning the network
+#' of edges that do not contribute to network efficiency.
+#' @param importFrom magrittr %<>%
+#' @param network An igraph object in which the nodes represent enriched pathways and
+#' the edges represent significant pathway crosstalks. The output of crosstalkNetwork().
+#' @return Returns a named list.
+#'      `full_network` An igraph object representing the full
+#'       network of top-performing pathway pairs.
+#'      `full_network_results` A dataframe describing the full network.
+#'      `pruned_network` An igraph object representing the pruned
+#'       network of top-performing pathway pairs.
+#'      `pruned_network_results` A dataframe describing the pruned network.
+#' @export
 
 networkEfficiency <- function(network){
 
@@ -11,7 +23,7 @@ networkEfficiency <- function(network){
                          c('V1', 'V2', 'path_length'))
 
     # select only unique combinations, remove self-references
-    paths_df %<>% filter(V1 != V2)
+    paths_df <- paths_df[paths_df$V1 != paths_df$V2,]
 
     pairs <- c()
 
@@ -27,8 +39,11 @@ networkEfficiency <- function(network){
 
     paths_df$pairs <- pairs
 
+    # remove duplicates
+    paths_df <- paths_df[!(duplicated(paths_df$pairs)),]
+
     # remove infinite values (unconnected nodes)
-    paths_df %<>% filter(!(is.infinite(path_length)))
+    paths_df <- paths_df[!(is.infinite(paths_df$path_length)),]
 
     # number of nodes in the network
     N <- as.numeric(length(igraph::V(network)))
@@ -41,108 +56,63 @@ networkEfficiency <- function(network){
 
 
 
-crosstalkInhibition <- function(networks_list){
+crosstalkInhibition <- function(network){
 
     results <- c()
 
-    for(i in 1:length(networks_list)){
+    # initial network efficiency of the network
+    NE <- networkEfficiency(network)
 
-        network_name <- names(networks_list)[i]
-        network <- networks_list[[network_name]]
+    full_edge_df <- data.frame(igraph::as_edgelist(network)) %>%
+        setNames(c('pathway1', 'pathway2'))
+    full_edge_df$edge <- paste0(full_edge_df$pathway1, '|', full_edge_df$pathway2)
+    full_edge_df$NE <- NE
 
-        # print(network_name)
+    # NE and PCI
+    nNE_results <- c()
+    PCI_results <- c()
+    significant_crosstalks <- c()
 
-        # initial network efficiency of the network
-        NE <- networkEfficiency(network)
+    # iterate over edges of the network
+    for (i in 1:nrow(full_edge_df)){
 
-        edge_list <- igraph::as_edgelist(network)
+        # delete one edge
+        new_network <- igraph::delete.edges(network, i)
 
-        # list to store subtype-specific results
-        significant_crosstalks <- c()
+        # calculate new network efficiency and percent change and store
+        nNE <- networkEfficiency(new_network)
+        nNE_results[i] <- nNE
 
-        # iterate over edges of the network
-        for (i in 1:nrow(edge_list)){
+        percent_change <- ((nNE - NE) / NE) * 100
+        PCI_results[i] <- percent_change
 
-            edge <- paste0(edge_list[i,1], '|', edge_list[i,2])
-
-            # delete one edge
-            new_network <- delete.edges(network, i)
-
-            # calculate new network efficiency
-            nNE <- networkEfficiency(new_network)
-
-            # store results if network efficiency is decreased
-            # by the removal of the edge
-            if (nNE < NE) {
-
-                percent_change <- ((nNE - NE) / NE) * 100
-                significant_crosstalks[edge] <- percent_change
-
-            }
-        }
-
-        significant_crosstalks <- as.data.frame(significant_crosstalks)
-        colnames(significant_crosstalks) <- 'PCI'
-
-        results[[network_name]] <- significant_crosstalks
+        # # store results if network efficiency is decreased
+        # # by the removal of the edge
+        # if (nNE < NE) {
+        #     significant_crosstalks[i] <- full_edge_df[i, 'edge']
+        # }
     }
 
-        return(results)
-}
+    # add network efficiency and PCI information to edge dataframe
+    full_edge_df$nNE <- nNE_results
+    full_edge_df$PCI <- PCI_results
+
+    # select significant crosstalks (nNE < NE)
+    pruned_edge_df <- full_edge_df[full_edge_df$PCI < 0, ]
+
+    # generate new network from significant crosstalks and associated edge df
+    pruned_network <- igraph::graph_from_edgelist(as.matrix(pruned_edge_df[,c(1,2)]),
+                                                  directed = FALSE)
 
 
-# testing and characterization -----------------------------------------------------------------
-
-
-characterizeResults <- function(sig_crosstalks_results, output_dir = NULL){
-
-    results <- c()
-
-    # using reactome.db:
-    rpathways <- as.list(reactome.db::reactomePATHNAME2ID)
-    rpathways_df <- tibble::enframe(rpathways) # %>% unnest
-    colnames(rpathways_df) <- c('pathway_name', 'name')
-    rpathways_df <- rpathways_df[grepl('HSA', rpathways_df$name),]
-    rpathways_df$name %<>% gsub('\\-', '\\.', .)
-
-    for (i in 1:length(sig_crosstalks_results)){
-
-        subtype <- names(sig_crosstalks_results)[i]
-        pathways <- sig_crosstalks_results[[i]]
-
-        PCI_results <- stack(sig_crosstalks_results[[i]])
-        colnames(PCI_results) <- c('PCI', 'pathway_pair')
-
-        subtype_results <- c()
-
-        for (j in 1:length(pathways)){
-
-            pathway_pair <- names(pathways)[j]
-            pathway_pair_split <-  unlist(strsplit(pathway_pair, '\\|'))
-
-            pathway1 <- pathway_pair_split[1]
-            pathway2 <- pathway_pair_split[2]
-
-            pathway1_name <- rpathways_df$pathway_name[rpathways_df$name == pathway1 ]
-            pathway2_name <- rpathways_df$pathway_name[rpathways_df$name == pathway2 ]
-
-            pathway_names_pasted <- paste0(pathway1_name, ' | ', pathway2_name)
-
-            subtype_results[[pathway_pair]] <- pathway_names_pasted
-
-        }
-
-        # openxlsx::write.xlsx(subtype_results, glue::glue('{`output_dir`}/{`subtype`}_summary.xlsx'))
-
-        subtype_results_df <- data.frame('pathway_pair' = names(subtype_results),
-                                         'pathway_names' = subtype_results)
-        subtype_results_df %<>% left_join(PCI_results, by = 'pathway_pair')
-
-        results[[subtype]] <- subtype_results_df
-    }
+    results[['full_network']] <- network
+    results[['full_network_results']] <- full_edge_df
+    results[['pruned_network']] <- pruned_network
+    results[['pruned_network_results']] <- pruned_edge_df
 
     return(results)
 }
+
 
 
 
