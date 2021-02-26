@@ -4,22 +4,34 @@
 \alias{diffExpression}
 \title{Conduct differential gene expression analysis for a given gene expression dataset.}
 \usage{
-diffExpression(data, gene_ids, design_mat, contrast_mat)
+diffExpression(expression_matrix, groups, platform, processes = 4)
 }
 \arguments{
-\item{data}{An expression matrix of intensity values for gene probes,
-where the row names are the probe identifiers. Pre-processing should be completed,
-including normalization, removing control sequences, log2 transformation, collapse to genes.}
+\item{expression_matrix}{An matrix of gene expression data where the
+row names are gene probe identifiers and column names are sample identifiers.
+For RNAseq data, a matrix of un-normalized integer counts. For microarray data,
+a matrix of intensity values for gene probes with pre-processing completed,
+including log2 transformation, normalization, removal of control sequences.}
 
-\item{gene_ids}{A vector of strings containing gene IDs corresponding to each row of the
-expression matrix.}
+\item{groups}{A dataframe containing the mappings between sample identifiers
+('sample_id', a factor with the reference condition as the first level) and
+associated treatment conditions ('group'). The sample identifiers must be in
+the same order as the columns of the count_matrix.}
 
-\item{design_mat}{A matrix specifying the experimental design,
-generated with model.matrix().
-#' @param contrast_mat A matrix specifying the preferred contrasts, generated
-with makeContrasts().}
+\item{platform}{A string specifying the data type. Either 'rnaseq' or 'microarray'.}
+}
+\value{
+A named list of contrasts, with each element containing the following objects:
+     `data` The expression matrix cross-section relevant to the contrast.
+     `groups` The groups dataframe cross-section relevant to the contrast.
+     `design` The design matrix relevant to the contrast.
+     `DEG` A dataframe containing the results of the differential expression analysis.
 }
 \description{
 Calculates log2 fold-changes and associated p-values for a
-given matrix of gene expression data.
+given matrix of gene expression data. diffExpression() will split the data
+according to the levels of the 'group' column in the supplied `groups` object,
+and generate appropriately cross-sectioned expression matrices, groups dataframes,
+and design matrices, which are returned with the differential expression results.
+These objects can be supplied to subsequent functions in the pathwayTalk pipeline.
 }

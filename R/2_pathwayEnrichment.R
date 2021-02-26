@@ -6,6 +6,7 @@
     return(output)
 }
 
+#' @title pathwayEnrichment
 #' @param importFrom magrittr %<>%
 #' @param DEGs A dataframe of differential gene expression results in with
 #' associated p-values in a column 'pvalue'. Extracted from the output of diffExpression().

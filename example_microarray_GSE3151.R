@@ -11,13 +11,17 @@ library(future)
 
 options(stringsAsFactors = FALSE)
 
-source('R/1_diffExpression.R')
-source('R/2_pathwayEnrichment.R')
-source('R/3_pathwayCrosstalk.R')
-source('R/4_classification.R')
-source('R/5_networkCharacterization.R')
-source('R/6_crosstalkInhibition.R')
-source('R/7_networkWrapper.R')
+# source('R/1_diffExpression.R')
+# source('R/2_pathwayEnrichment.R')
+# source('R/3_pathwayCrosstalk.R')
+# source('R/4_classification.R')
+# source('R/5_networkCharacterization.R')
+# source('R/6_crosstalkInhibition.R')
+# source('R/7_networkWrapper.R')
+
+library(devtools)
+devtools::install_github('hemoshear/pathwayTalk', ref = 'wrapper_dev')
+library(pathwayTalk)
 
 
 # import data object ------------------------------------------------------

@@ -1,3 +1,4 @@
+#' @title pathwayCrosstalk
 #' @param expression_matrix An matrix of gene expression data where the
 #' row names are gene probe identifiers and column names are sample identifiers.
 #' For RNAseq data, a matrix of un-normalized integer counts. For microarray data,

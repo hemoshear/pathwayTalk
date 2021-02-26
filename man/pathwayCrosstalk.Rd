@@ -2,13 +2,34 @@
 % Please edit documentation in R/3_pathwayCrosstalk.R
 \name{pathwayCrosstalk}
 \alias{pathwayCrosstalk}
-\title{Calculate matrix of discriminating scores for pathway crosstalk}
+\title{pathwayCrosstalk}
 \usage{
-pathwayCrosstalk(enriched_pathways, treatment_map, processes = 4)
+pathwayCrosstalk(expression_matrix, DEPs, groups, pathways, pathway_alpha)
 }
 \arguments{
-\item{enriched_pathways}{Output of fisherPathwayEnrichment}
+\item{expression_matrix}{An matrix of gene expression data where the
+row names are gene probe identifiers and column names are sample identifiers.
+For RNAseq data, a matrix of un-normalized integer counts. For microarray data,
+a matrix of intensity values for gene probes with pre-processing completed,
+including log2 transformation, normalization, removal of control sequences.}
+
+\item{DEPs}{A data frame of results for the Fisher's exact tests with a column 'p'.
+The output of fisherPathwayEnrichment().}
+
+\item{groups}{A dataframe containing the mappings between sample identifiers
+('sample_id', a factor with the reference condition as the first level) and
+associated treatment conditions ('group'). The sample identifiers must be in
+the same order as the columns of the count_matrix.}
+
+\item{pathways}{A named list in which each element is a pathway containing a
+character vector of the corresponding gene IDs.}
+
+\item{pathway_alpha}{Significance level for pathways. Pathways where the Fisher's exact
+test p-value is less than `pathway_alpha` will be labeled as enriched for the purposes
+of downstream analyses.
+@return A matrix of discriminating scores in which each column is a pair of
+enriched pathways and each row is a sample.}
 }
 \description{
-Calculate matrix of discriminating scores for pathway crosstalk
+pathwayCrosstalk
 }
