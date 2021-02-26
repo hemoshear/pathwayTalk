@@ -23,9 +23,7 @@ Imports:
     limma,
     gtools,
     dplyr,
-    gsap,
     reactome.db,
-    mgcv,
     stringr,
     reshape2,
     Biobase,
@@ -33,4 +31,5 @@ Imports:
     glmnet,
     msigdbr,
     igraph,
-    tibble
+    tibble,
+    future

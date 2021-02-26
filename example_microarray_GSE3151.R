@@ -3,7 +3,6 @@
 # purpose: import public microarray dataset from NCBI via GEO query
 
 library(GEOquery)
-library(Biobase)
 library(biomaRt)
 library(dplyr)
 library(magrittr)

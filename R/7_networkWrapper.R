@@ -19,12 +19,14 @@
 #'  of downstream analyses.
 #' @param ... Additional arguments to crosstalkNetwork() function.
 #' @return Returns a named list.
-#'      `full_network` An igraph object representing the full
+#'      \itemize{
+#'      \item full_network - An igraph object representing the full
 #'       network of top-performing pathway pairs.
-#'      `full_network_results` A dataframe describing the full network.
-#'      `pruned_network` An igraph object representing the pruned
+#'      \item full_network_results - A dataframe describing the full network.
+#'      \item pruned_network - An igraph object representing the pruned
 #'       network of top-performing pathway pairs.
-#'      `pruned_network_results` A dataframe describing the pruned network.
+#'      \item pruned_network_results - A dataframe describing the pruned network.
+#'      }
 #' @export
 #'
 

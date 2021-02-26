@@ -2,7 +2,7 @@
 % Please edit documentation in R/2_pathwayEnrichment.R
 \name{fisherPathwayEnrichment}
 \alias{fisherPathwayEnrichment}
-\title{pathwayEnrichment}
+\title{fisherPathwayEnrichment}
 \usage{
 fisherPathwayEnrichment(DEGs, gene_alpha, pathways)
 }
@@ -21,11 +21,13 @@ character vector of the corresponding gene IDs.}
 }
 \value{
 A data frame of results for the Fisher's exact tests.
-    `p` Unadjusted p-value.
-    `adj_p` FDR adjusted p-value.
-    `estimate` odds ratio point estimate.
-    `pathway` Paste of Reactome pathway identifier and description.
+    \itemize{
+    \item p - Unadjusted p-value.
+    \item adj_p - FDR adjusted p-value.
+    \item estimate - odds ratio point estimate.
+    \item pathway - Paste of Reactome pathway identifier and description.
+    }
 }
 \description{
-pathwayEnrichment
+fisherPathwayEnrichment
 }
