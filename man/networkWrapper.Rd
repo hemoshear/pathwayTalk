@@ -2,7 +2,7 @@
 % Please edit documentation in R/7_networkWrapper.R
 \name{networkWrapper}
 \alias{networkWrapper}
-\title{}
+\title{networkWrapper}
 \usage{
 networkWrapper(
   expression_matrix,
@@ -50,5 +50,5 @@ Returns a named list.
      }
 }
 \description{
-
+Wrapper function for the pathwayTalk workflow.
 }

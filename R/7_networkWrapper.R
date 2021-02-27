@@ -1,5 +1,5 @@
-#' @title
-#' @description
+#' @title networkWrapper
+#' @description Wrapper function for the pathwayTalk workflow.
 #' @importFrom magrittr %>%
 #' @param expression_matrix An matrix of gene expression data where the
 #' row names are the gene probe identifiers and column names are the sample identifiers.

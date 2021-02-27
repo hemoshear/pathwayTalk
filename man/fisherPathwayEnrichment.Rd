@@ -20,7 +20,7 @@ character vector of the corresponding gene IDs.}
 \item{importFrom}{magrittr %<>%}
 }
 \value{
-A data frame of results for the Fisher\'s exact tests.
+A data frame of results for the Fisher's exact tests.
     \itemize{
     \item p - Unadjusted p-value.
     \item adj_p - FDR adjusted p-value.
