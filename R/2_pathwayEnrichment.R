@@ -1,11 +1,3 @@
-
-.fisherTest <- function(...){
-    result <- fisher.test(...)
-    output <- data.frame(p = result$p.value,
-                         estimate = result$estimate)
-    return(output)
-}
-
 #' @title fisherPathwayEnrichment
 #' @param importFrom magrittr %<>%
 #' @param DEGs A dataframe of differential gene expression results in with
@@ -33,6 +25,14 @@ fisherPathwayEnrichment <- function(DEGs, gene_alpha, pathways) {
 
     # Remove any duplicate gene ids from the pathways list
     pathways <- purrr::map(pathways, ~ unique(.))
+
+    # define function to do fisher test
+    .fisherTest <- function(...){
+        result <- fisher.test(...)
+        output <- data.frame(p = result$p.value,
+                             estimate = result$estimate)
+        return(output)
+    }
 
     # nested lapply
     fisher_enrichment <- function(deg, pathways){
