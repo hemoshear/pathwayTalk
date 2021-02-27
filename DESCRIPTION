@@ -15,7 +15,6 @@ Suggests:
     rmarkdown
 VignetteBuilder: knitr
 Additional_repositories:
-    https://github.com/hemoshear/gsap
     https://bioconductor.org/packages/3.8/bioc
 Imports: 
     magrittr,
