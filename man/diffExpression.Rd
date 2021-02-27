@@ -21,7 +21,7 @@ the same order as the columns of the count_matrix.}
 \item{platform}{A string specifying the data type. Either 'rnaseq' or 'microarray'.}
 }
 \value{
-A named list of contrasts, with each element containing the following objects:
+A named list of contrasts, with each element containing the following objects
      \itemize{
      \item data - The expression matrix cross-section relevant to the contrast.
      \item groups - The groups dataframe cross-section relevant to the contrast.
