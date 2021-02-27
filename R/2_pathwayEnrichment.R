@@ -15,12 +15,12 @@
 #' @param gene_alpha Significance level for differentially expressed genes. Genes with a
 #'  p-value less than `gene_alpha` will be labeled as differentially expressed for the purpose
 #'  doing a Fisher's exact test for pathway enrichment.
-#' @return A data frame of results for the Fisher's exact tests.
+#' @return A data frame of results for the Fisher\'s exact tests.
 #'     \itemize{
 #'     \item p - Unadjusted p-value.
 #'     \item adj_p - FDR adjusted p-value.
-#'     \item estimate - odds ratio point estimate.
-#'     \item pathway - Paste of Reactome pathway identifier and description.
+#'     \item estimate - Odds ratio point estimate.
+#'     \item pathway - Pathway ID.
 #'     }
 #' @export
 fisherPathwayEnrichment <- function(DEGs, gene_alpha, pathways) {
