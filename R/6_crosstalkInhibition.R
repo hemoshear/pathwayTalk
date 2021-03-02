@@ -2,7 +2,7 @@
 #' @description Given a network, calculate the network efficiency. Iterate over
 #' network edges and conduct simulated network crosstalk inhibition, pruning the network
 #' of edges that do not contribute to network efficiency.
-#' @param importFrom magrittr %<>%
+#' @importFrom magrittr %<>%
 #' @param network An igraph object in which the nodes represent enriched pathways and
 #' the edges represent significant pathway crosstalks. The output of crosstalkNetwork().
 #' @return Returns a named list.

@@ -9,8 +9,6 @@ networkEfficiency(network)
 \arguments{
 \item{network}{An igraph object in which the nodes represent enriched pathways and
 the edges represent significant pathway crosstalks. The output of crosstalkNetwork().}
-
-\item{importFrom}{magrittr %<>%}
 }
 \value{
 Returns a named list.

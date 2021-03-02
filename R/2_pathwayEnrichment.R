@@ -1,5 +1,7 @@
 #' @title fisherPathwayEnrichment
-#' @param importFrom magrittr %<>%
+#' @description Conduct Fisher's test for pathway enrichment analysis for a set
+#' of differentially expressed genes.
+#' @importFrom magrittr %<>%
 #' @param DEGs A dataframe of differential gene expression results in with
 #' associated p-values in a column 'pvalue'. Extracted from the output of diffExpression().
 #' @param pathways A named list in which each element is a pathway containing a
@@ -8,12 +10,12 @@
 #'  p-value less than `gene_alpha` will be labeled as differentially expressed for the purpose
 #'  doing a Fisher's exact test for pathway enrichment.
 #' @return A data frame of results for the Fisher's exact tests.
-#'     \itemize{
-#'     \item p - Unadjusted p-value.
-#'     \item adj_p - FDR adjusted p-value.
-#'     \item estimate - Odds ratio point estimate.
-#'     \item pathway - Pathway ID.
-#'     }
+#'  \itemize{
+#'  \item p - Unadjusted p-value.
+#'  \item adj_p - FDR adjusted p-value.
+#'  \item estimate - Odds ratio point estimate.
+#'  \item pathway - Pathway ID.
+#'  }
 #' @export
 fisherPathwayEnrichment <- function(DEGs, gene_alpha, pathways) {
 

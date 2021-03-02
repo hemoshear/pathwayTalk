@@ -16,18 +16,17 @@ doing a Fisher's exact test for pathway enrichment.}
 
 \item{pathways}{A named list in which each element is a pathway containing a
 character vector of the corresponding gene IDs.}
-
-\item{importFrom}{magrittr %<>%}
 }
 \value{
 A data frame of results for the Fisher's exact tests.
-    \itemize{
-    \item p - Unadjusted p-value.
-    \item adj_p - FDR adjusted p-value.
-    \item estimate - Odds ratio point estimate.
-    \item pathway - Pathway ID.
-    }
+ \itemize{
+ \item p - Unadjusted p-value.
+ \item adj_p - FDR adjusted p-value.
+ \item estimate - Odds ratio point estimate.
+ \item pathway - Pathway ID.
+ }
 }
 \description{
-fisherPathwayEnrichment
+Conduct Fisher's test for pathway enrichment analysis for a set
+of differentially expressed genes.
 }
