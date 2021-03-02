@@ -99,11 +99,11 @@ results <- purrr::map2(DEG, enriched_short,
 
 # extract results ---------------------------------------------------------
 
-full_networks <- purrr::map(results, ~ .$crosstalk_inhibition$full_network)
-pruned_networks <- purrr::map(results, ~ .$crosstalk_inhibition$pruned_network)
+full_networks <- purrr::map(results, ~ .$full_network)
+pruned_networks <- purrr::map(results, ~ .$pruned_network)
 
-full_edges <- purrr::map(results, ~ .$crosstalk_inhibition$full_network_results)
-pruned_edges <- purrr::map(results, ~ .$crosstalk_inhibition$pruned_network_results)
+full_edges <- purrr::map(results, ~ .$full_network_results)
+pruned_edges <- purrr::map(results, ~ .$pruned_network_results)
 
 plot(full_networks[[1]])
 plot(pruned_networks[[1]])
@@ -111,8 +111,8 @@ plot(pruned_networks[[1]])
 purrr::map(full_edges, ~nrow(.)) %>% unlist
 purrr::map(pruned_edges, ~nrow(.)) %>% unlist
 
-full_edges_all_contrasts <- bind_rows(full_edges, .id = 'contrast')
-pruned_edges_all_contrasts <- bind_rows(pruned_edges, .id = 'contrast')
+# full_edges_all_contrasts <- bind_rows(full_edges, .id = 'contrast')
+# pruned_edges_all_contrasts <- bind_rows(pruned_edges, .id = 'contrast')
 
 # annotate results ------------------------------------
 
@@ -123,55 +123,95 @@ r_pathway_names_df <- tibble::enframe(r_pathway_names) %>%
 r_pathway_names_df <- r_pathway_names_df[grepl('HSA', r_pathway_names_df$name),]
 r_pathway_names_df$name %<>% gsub('\\-', '\\.', .)
 
-pruned_edges_all_contrasts$pathway1 %in% r_pathway_names_df$name
-pruned_edges_all_contrasts$pathway1 %in% r_pathway_names_df$name
+annotateNetwork <- function(network_df, pathway_df){
 
-names1 <- r_pathway_names_df[match(pruned_edges_all_contrasts$pathway1,
-                                          r_pathway_names_df$name), 'pathway_name']
-names2 <- r_pathway_names_df[match(pruned_edges_all_contrasts$pathway2,
-                                   r_pathway_names_df$name), 'pathway_name']
+    res <- network_df
 
-pruned_edges_all_contrasts$pathway1_name <- names1$pathway_name
-pruned_edges_all_contrasts$pathway2_name <- names2$pathway_name
+    names1 <- pathway_df[match(res$pathway1,
+                               pathway_df$name), 'pathway_name']
+    names2 <- pathway_df[match(res$pathway2,
+                               pathway_df$name), 'pathway_name']
 
+    res$pathway1_name <- names1$pathway_name
+    res$pathway2_name <- names2$pathway_name
+
+    return(res)
+}
+
+
+pathway_results <- purrr::map(pruned_edges,
+                              ~annotateNetwork(network_df = .,
+                                               pathway_df = r_pathway_names_df))
+
+
+# pruned_edges_all_contrasts$pathway1 %in% r_pathway_names_df$name
+# pruned_edges_all_contrasts$pathway2 %in% r_pathway_names_df$name
 
 # add associated genes ----------------------------------------------------
 
-pathways <- reactome_pathways
-names(pathways) %<>% gsub('\\-', '\\.', .)
-
-a <- pruned_edges_all_contrasts[1, 'pathway1']
-b <- pruned_edges_all_contrasts[1, 'pathway2']
-
-intersect(pathways[[a]], pathways[[b]])
-
-genes_list <- c()
-
-for (i in 1:nrow(pruned_edges_all_contrasts)){
-    a <- pruned_edges_all_contrasts[i, 'pathway1']
-    b <- pruned_edges_all_contrasts[i, 'pathway2']
-
-    res <- intersect(pathways[[a]], pathways[[b]])
-
-}
-
-temp <- purrr::map2(pruned_edges_all_contrasts$pathway1,
-                        pruned_edges_all_contrasts$pathway2,
-                        ~ ifelse(length(intersect(pathways[[.x]], pathways[[.y]])) == 0,
-                                 'None',
-                                 paste0(intersect(pathways[[.x]], pathways[[.y]]))))
-
-names(temp) <- pruned_edges_all_contrasts$contrast
-
-genes <- unique(temp) %>% setdiff('None')
-
-
 mart = useMart('ensembl', 'hsapiens_gene_ensembl')
-
 key = getBM(mart = mart, attributes = c('entrezgene_id', 'external_gene_name',
                                         'gene_biotype', 'description',
                                         'arrayexpress'))
 key$entrezgene_id %<>% as.character
 
-genes_df <- data.frame('entrezgene_id' = genes)
-genes_df %<>% dplyr::left_join(key)
+pathways <- reactome_pathways
+names(pathways) %<>% gsub('\\-', '\\.', .)
+
+
+extractNetworkGenes <- function(network_df, pathway_list, gene_key){
+
+    results <- c()
+
+    for (i in 1:nrow(network_df)){
+
+        pathway1 <- network_df$pathway1[i]
+        pathway2 <- network_df$pathway1[i]
+
+        intersection <- intersect(pathway_list[[pathway1]],
+                                  pathway_list[[pathway2]])
+
+        if(length(intersection) != 0){
+            results[[i]] <- intersection
+        }
+        else{
+            results[[i]] <- 'None'
+        }
+
+    }
+
+    genes <- unlist(results)
+    genes %<>% unique %>% setdiff('None')
+    genes_df <- data.frame('entrezgene_id' = genes)
+    genes_df %<>% left_join(key)
+
+    return(genes_df)
+
+
+}
+
+
+gene_results <- purrr::map(pruned_edges,
+                           ~extractNetworkGenes(network_df = .,
+                                                pathway_list = pathways,
+                                                gene_key = key))
+
+
+# save results
+
+openxlsx::write.xlsx(full_edges, 'results/RNAseq/final/example_BDG0202_full_edges.xlsx')
+openxlsx::write.xlsx(pruned_edges, 'results/RNAseq/final/example_BDG0202_pruned_edges.xlsx')
+openxlsx::write.xlsx(pathway_results, 'results/RNAseq/final/example_BDG0202_pathway_results.xlsx')
+openxlsx::write.xlsx(gene_results, 'results/RNAseq/final/example_BDG0202_gene_results.xlsx')
+
+
+
+
+
+
+
+
+
+
+
+
