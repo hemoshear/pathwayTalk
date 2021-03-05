@@ -52,7 +52,10 @@ diffExpression <- function(expression_matrix,
 
     data_list <- c()
     data_list <- purrr::map(conditions,
-                            ~ split_data(., ref_condition, groups, expression_matrix))
+                            ~ split_data(condition = .,
+                                         ref_condition = ref_condition,
+                                         groups_df = groups,
+                                         counts = expression_matrix))
     names(data_list) <- conditions
 
     do_rnaseq_DEA <- function(condition){

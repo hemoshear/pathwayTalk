@@ -47,6 +47,8 @@ networkWrapper <- function(expression_matrix, groups, DEPs, pathways, pathway_al
     network_results <- crosstalkNetwork(crosstalk_matrix = crosstalk_matrix,
                                         groups = groups,
                                         lambda = lambda,
+                                        output_network = TRUE,
+                                        output_model = FALSE,
                                         ...)
     network <- network_results[['network']]
 

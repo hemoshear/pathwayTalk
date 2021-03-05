@@ -14,21 +14,19 @@
 #' Use alpha = 1 for lasso regression and alpha = 0 for ridge regression.
 #' @param lambda The lambda value applied to the glmnet classification model.
 #' @param output_network Logical. If TRUE, the function outputs the network object.
-#' @param model_evaluation Logical. If TRUE, the function outputs the model evaluation metrics.
+#' @param output_model Logical. If TRUE, the function outputs the model.
 #' @return Depending on the values of the `output_network` and `model_evaluation`
 #' arguments, either a list containing the network object or a list containing
 #' the model evaluation metrics.
 #' @export
 crosstalkNetwork <- function(crosstalk_matrix, groups, alpha = 1, lambda = 'best',
-                            output_network = TRUE, model_evaluation = FALSE){
+                            output_network = TRUE, output_model = FALSE){
 
     matrix_sample_ids <- rownames(crosstalk_matrix)
     ordered_group_vector <- groups[match(matrix_sample_ids, groups$sample_id), 'group'] %>%
         as.character
 
     crosstalk_matrix <- as.matrix(crosstalk_matrix)
-
-    sample_phenotype <- ordered_group_vector
     sample_phenotype <- as.matrix(ordered_group_vector)
 
     output_list <- list()
@@ -40,7 +38,7 @@ crosstalkNetwork <- function(crosstalk_matrix, groups, alpha = 1, lambda = 'best
         full_data$phenotype <- factor(sample_phenotype)
 
         train_control <- caret::trainControl(method = "cv",
-                                      number = 10,
+                                      number = 3,
                                       savePredictions = TRUE,
                                       classProbs = TRUE)
 
@@ -49,20 +47,21 @@ crosstalkNetwork <- function(crosstalk_matrix, groups, alpha = 1, lambda = 'best
                              method = 'glmnet',
                              family = 'binomial',
                              tuneGrid = expand.grid(.alpha = alpha,
-                                                    .lambda=seq(0.05, 1, 0.05)),
+                                                    .lambda=seq(0.05, 0.5, 0.05)),
                              trControl = train_control)
 
         lambda <- lasso_model$bestTune$lambda
 
     }
 
+
+    # fit glmnet model
+    model <- glmnet::glmnet(x = crosstalk_matrix, y = sample_phenotype, family = 'binomial',
+                            alpha = alpha, lambda = lambda)
+    # sort(abs(model$beta), decreasing = TRUE) %>% View
+
     # generate network:
     if (output_network){
-
-        # fit glmnet model
-        model <- glmnet::glmnet(x = crosstalk_matrix, y = sample_phenotype, family = 'binomial',
-                        alpha = alpha, lambda = lambda)
-        # sort(abs(model$beta), decreasing = TRUE)
 
         # identify top pathway pairs (non-zero coefficients)
         coef_matrix <- as.matrix(abs(model$beta))
@@ -94,49 +93,20 @@ crosstalkNetwork <- function(crosstalk_matrix, groups, alpha = 1, lambda = 'best
         # generate dataframe
         df <- igraph::as_data_frame(network) %>% setNames(c('V1', 'V2'))
 
-        output_list[['alpha']] <- alpha
-        output_list[['lambda']] <- lambda
         output_list[['network']] <- network
         output_list[['dataframe']] <- df
 
-        return(output_list)
-
     }
 
-    if (model_evaluation){
+    if (output_model){
 
-        # split into test and train subsets
-        set.seed(8)
-        index <- sample.int(nrow(crosstalk_matrix), 0.8*nrow(crosstalk_matrix))
-        train <- crosstalk_matrix[index,]
-        test <- crosstalk_matrix[-index,]
-
-        train_y <- as.matrix(sample_phenotype[index])
-        train_x <- as.matrix(train)
-
-        test_y <- as.matrix(sample_phenotype[-index])
-        test_x <- as.matrix(test)
-
-        # fit glmnet model
-        model <- glmnet(x = train_x, y = train_y, family = 'binomial',
-                        alpha = alpha, lambda = lambda)
-
-        test_y %<>% factor
-
-        # evaluating with assess.glmnet:
-        a <- glmnet::assess.glmnet(model, newx = test_x, newy = test_y, family = 'binomial')
-        c <- glmnet::confusion.glmnet(model, newx = test_x, newy = test_y, family = 'binomial')
-        r <- glmnet::roc.glmnet(model, newx = test_x, newy = test_y, family = 'binomial')
-
-        output_list[['model_evaluation_metrics']] <- a
-        output_list[['modelconfusion_matrix']] <- c
-        output_list[['model_ROC']] <- r
+        output_list[['model']] <- model
         output_list[['alpha']] <- alpha
         output_list[['lambda']] <- lambda
 
-        return(output_list)
-
     }
+
+    return(output_list)
 
 }
 
