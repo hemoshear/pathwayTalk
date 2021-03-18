@@ -13,11 +13,12 @@ options(stringsAsFactors = FALSE)
 
 # source('R/1_diffExpression.R')
 # source('R/2_pathwayEnrichment.R')
-# source('R/3_pathwayCrosstalk.R')
-# source('R/4_classification.R')
+source('R/3_pathwayCrosstalk.R')
+source('R/4_classification.R')
 # source('R/5_networkCharacterization.R')
-# source('R/6_crosstalkInhibition.R')
+source('R/6_crosstalkInhibition.R')
 # source('R/7_networkWrapper.R')
+source('R/8_cvWrapper.R')
 
 
 
@@ -69,11 +70,10 @@ metadata <- dplyr::mutate(metadata,
 #
 # saveRDS(E_genes, 'data/GSE3151_processed_e_mat.RDS')
 
-# step 1: differential expression analysis  -------------------------------
+# step 0: data sampling ---------------------------------------------------
 
 # read in the processed data
 processed_data <- readRDS('data/GSE3151_processed_e_mat.RDS')
-
 processed_exprs <- processed_data$datETcollapsed
 
 # define groups
@@ -81,38 +81,28 @@ groups <- metadata[,c('geo_accession', 'treatment')] %>%
     setNames(c('sample_id', 'group'))
 groups$group %<>% factor %>% relevel(ref = 'GFP')
 
-# do differential expression analysis
-DEG <- diffExpression(expression_matrix = processed_exprs,
-                      groups = groups,
-                      platform = 'microarray')
-
-# step 2: pathway enrichment analysis -------------------------------------
-
-# extract DEGs from diffExpression output
-DEG_dfs <- purrr::map(DEG, ~.$DEGs)
-
 # import pathways list
 reactome_pathways <- readRDS('data/reactome_pathways.RDS')
 
-enriched <- fisherPathwayEnrichment(DEG_dfs, gene_alpha=0.05,
-                                    pathways = reactome_pathways)
 
-purrr::map(enriched, ~nrow(.))
-purrr::map(enriched, ~sum(is.infinite(.$estimate)))
-enriched_short <- purrr::map(enriched, ~filter(., !is.infinite(estimate)))
-purrr::map(enriched_short, ~nrow(.))
+# try cv wrapper ----------------------------------------------------------
 
-# network wrapper --------------------------------------------------------
+final_results <- cvWrapper(expression_matrix = processed_exprs,
+                           groups = groups,
+                           platform = 'microarray',
+                           gene_alpha = 0.05,
+                           pathways = reactome_pathways,
+                           pathway_alpha = 0.01,
+                           lambda = 0.01,
+                           sampling_method = 'partition',
+                           times = 10,
+                           p = 0.6)
 
-all(names(DEG) == names(enriched_short))
+saveRDS(final_results, 'results/microarray/final/cv/GSE3151_cvWrapper_10.RDS')
+final_results <- readRDS('results/microarray/final/cv/GSE3151_cvWrapper_10.RDS')
 
-results <- purrr::map2(DEG, enriched_short,
-                       ~ networkWrapper(expression_matrix = .x$data,
-                                        groups = .x$groups,
-                                        DEPs = .y,
-                                        pathways = reactome_pathways,
-                                        pathway_alpha = 0.001,
-                                        lambda = 0.01))
+results <- final_results$crosstalk_inhibition_results
+saveRDS(results, 'results/microarray/final/cv/GSE3151_cvWrapper_10_results.RDS')
 
 # extract results ---------------------------------------------------------
 
@@ -123,7 +113,7 @@ full_edges <- purrr::map(results, ~ .$full_network_results)
 pruned_edges <- purrr::map(results, ~ .$pruned_network_results)
 
 plot(full_networks[[1]])
-plot(pruned_networks[[1]])
+plot(pruned_networks[[4]])
 
 purrr::map(full_edges, ~nrow(.)) %>% unlist
 purrr::map(pruned_edges, ~nrow(.)) %>% unlist
@@ -176,6 +166,7 @@ pathways <- reactome_pathways
 names(pathways) %<>% gsub('\\-', '\\.', .)
 
 
+
 extractNetworkGenes <- function(network_df, pathway_list, gene_key){
 
     results <- c()
@@ -217,15 +208,15 @@ gene_results <- purrr::map(pruned_edges,
 
 # save results ------------------------------------------------------------
 
-saveRDS(full_edges, 'results/microarray/final/GSE3151_full_edges.RDS')
-saveRDS(pruned_edges, 'results/microarray/final/GSE3151_pruned_edges.RDS')
-saveRDS(pathway_results, 'results/microarray/final/GSE3151_pathway_results.RDS')
-saveRDS(gene_results, 'results/microarray/final/GSE3151_gene_results.RDS')
+saveRDS(full_edges, 'results/microarray/final/cv/GSE3151_full_edges.RDS')
+saveRDS(pruned_edges, 'results/microarray/final/cv/GSE3151_pruned_edges.RDS')
+saveRDS(pathway_results, 'results/microarray/final/cv/GSE3151_pathway_results.RDS')
+saveRDS(gene_results, 'results/microarray/final/cv/GSE3151_gene_results.RDS')
 
-openxlsx::write.xlsx(full_edges, 'results/microarray/final/GSE3151_full_edges.xlsx')
-openxlsx::write.xlsx(pruned_edges, 'results/microarray/final/GSE3151_pruned_edges.xlsx')
-openxlsx::write.xlsx(pathway_results, 'results/microarray/final/GSE3151_pathway_results.xlsx')
-openxlsx::write.xlsx(gene_results, 'results/microarray/final/GSE3151_gene_results.xlsx')
+openxlsx::write.xlsx(full_edges, 'results/microarray/final/cv/GSE3151_full_edges.xlsx')
+openxlsx::write.xlsx(pruned_edges, 'results/microarray/final/cv/GSE3151_pruned_edges.xlsx')
+openxlsx::write.xlsx(pathway_results, 'results/microarray/final/cv/GSE3151_pathway_results.xlsx')
+openxlsx::write.xlsx(gene_results, 'results/microarray/final/cv/GSE3151_gene_results.xlsx')
 
 
 

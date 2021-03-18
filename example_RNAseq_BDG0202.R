@@ -1,28 +1,22 @@
-library(magrittr)
-library(dplyr)
-library(tidyr)
-library(gtools)
 library(GEOquery)
-library(Rsubread)
-library(igraph)
-library(limma)
-library(edgeR)
 library(DESeq2)
-library(pathwayTalk)
-library(furrr)
-library(future)
 library(biomaRt)
+library(dplyr)
+library(magrittr)
+library(future)
+library(pathwayTalk) # installation of branch wrapper-dev
+
 
 options(stringsAsFactors = FALSE)
 
 
-source('R/1_diffExpression.R')
-source('R/2_pathwayEnrichment.R')
-source('R/3_pathwayCrosstalk.R')
-source('R/4_classification.R')
-source('R/5_networkCharacterization.R')
-source('R/6_crosstalkInhibition.R')
-source('R/7_networkWrapper.R')
+# source('R/1_diffExpression.R')
+# source('R/2_pathwayEnrichment.R')
+# source('R/3_pathwayCrosstalk.R')
+# source('R/4_classification.R')
+# source('R/5_networkCharacterization.R')
+# source('R/6_crosstalkInhibition.R')
+# source('R/7_networkWrapper.R')
 
 # data import ----------------------------------------------------
 
@@ -147,7 +141,7 @@ pathway_results <- purrr::map(pruned_edges,
 # pruned_edges_all_contrasts$pathway1 %in% r_pathway_names_df$name
 # pruned_edges_all_contrasts$pathway2 %in% r_pathway_names_df$name
 
-# add associated genes ----------------------------------------------------
+# extract associated genes ----------------------------------------------------
 
 mart = useMart('ensembl', 'hsapiens_gene_ensembl')
 key = getBM(mart = mart, attributes = c('entrezgene_id', 'external_gene_name',
@@ -197,12 +191,18 @@ gene_results <- purrr::map(pruned_edges,
                                                 gene_key = key))
 
 
-# save results
 
-openxlsx::write.xlsx(full_edges, 'results/RNAseq/final/example_BDG0202_full_edges.xlsx')
-openxlsx::write.xlsx(pruned_edges, 'results/RNAseq/final/example_BDG0202_pruned_edges.xlsx')
-openxlsx::write.xlsx(pathway_results, 'results/RNAseq/final/example_BDG0202_pathway_results.xlsx')
-openxlsx::write.xlsx(gene_results, 'results/RNAseq/final/example_BDG0202_gene_results.xlsx')
+# save results ------------------------------------------------------------
+
+saveRDS(full_edges, 'results/RNAseq/final/BDG0202_full_edges.RDS')
+saveRDS(pruned_edges, 'results/RNAseq/final/BDG0202_pruned_edges.RDS')
+saveRDS(pathway_results, 'results/RNAseq/final/BDG0202_pathway_results.RDS')
+saveRDS(gene_results, 'results/RNAseq/final/BDG0202_gene_results.RDS')
+
+openxlsx::write.xlsx(full_edges, 'results/RNAseq/final/BDG0202_full_edges.xlsx')
+openxlsx::write.xlsx(pruned_edges, 'results/RNAseq/final/BDG0202_pruned_edges.xlsx')
+openxlsx::write.xlsx(pathway_results, 'results/RNAseq/final/BDG0202_pathway_results.xlsx')
+openxlsx::write.xlsx(gene_results, 'results/RNAseq/final/BDG0202_gene_results.xlsx')
 
 
 

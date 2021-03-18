@@ -1,13 +1,12 @@
 # Taylor Derby Pourtaheri
 
-# purpose: import public microarray dataset from NCBI via GEO query
-
 library(GEOquery)
 library(biomaRt)
 library(dplyr)
 library(magrittr)
 library(future)
 library(pathwayTalk) # installation of branch wrapper-dev
+library(annotate) # annotation for microarrays
 
 options(stringsAsFactors = FALSE)
 
@@ -23,34 +22,54 @@ options(stringsAsFactors = FALSE)
 
 # import data object ------------------------------------------------------
 
-# # dataset on NCBI: https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSE3151
+# # dataset on NCBI: https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSE58212
 #
 # # define accension ID for the dataset
-# GEO_acc_ID <- 'GSE3151'
+# GEO_acc_ID <- 'GSE58212'
 #
 # # import data as ExpressionSet object - see ?ExpressionSet
 # gse <- getGEO(GEO = GEO_acc_ID)
-# gse <- gse$GSE3151_series_matrix.txt.gz
+# gse <- gse$GSE58212_series_matrix.txt.gz
 #
 # # save RDS for future use
-# saveRDS(object = gse, file = 'data/GSE3151_expression_set.RDS')
+# saveRDS(object = gse, file = 'data/GSE58212_expression_set.RDS')
 #
 # # reading, processing, and subsetting --------------------------------------------------
 
 # read in the data
-E <- readRDS(file = 'data/GSE3151_expression_set.RDS')
+E <- readRDS(file = 'data/GSE58212_expression_set.RDS')
 
 # create a cleaned metadata object
 metadata <- pData(E)
 
+# inspect
+colnames(metadata) %<>% snakecase::to_snake_case()
+dplyr::count(metadata,
+             pam_50_subgroup_ch_1)
+
 # we only need two columns from the metadata
-metadata <- dplyr::select(metadata, title, geo_accession)
+metadata <- dplyr::select(metadata, geo_accession, pam_50_subgroup_ch_1)
 
 # create a new treatment column in meta
 metadata <- dplyr::mutate(metadata,
-                          treatment = gsub("\\-.*", "", title),
-                          treatment = toupper(treatment))
+                          treatment = toupper(pam_50_subgroup_ch_1))
 
+# it looks like it is already log-transformed
+hist(exprs(E))
+limma::plotDensities(E, legend=FALSE)
+
+# from GEO:
+# Arrays were log2-transformed, quantile normalized and hospital-adjusted
+# by subtracting from each probe value the mean probe value among samples from the same hospital.
+
+# filter low counts
+
+
+
+# look at eBayes object
+# plotSA
+
+# plot_probe plots
 
 # # log2 transformation of the expression matrix
 # Biobase::exprs(E) <- log2(Biobase::exprs(E))
@@ -61,25 +80,31 @@ metadata <- dplyr::mutate(metadata,
 # # create a feature data object
 # feature_data <- fData(E)
 #
+# # remove probes without gene mappings
+# sum(is.na(feature_data$GENE)) / nrow(feature_data) # 30% of probes do not have genes?
+# nrow(feature_data[!is.na(feature_data$GENE),])
+# E_short <- exprs(E)[!is.na(feature_data$GENE),]
+# feature_data %<>% filter(!is.na(GENE))
+#
 # # collapse probe rows to genes
-# E_genes <- WGCNA::collapseRows(datET = E_qt,
-#                              rowGroup = feature_data$ENTREZ_GENE_ID,
-#                              rowID = rownames(E_qt),
+# E_genes <- WGCNA::collapseRows(datET = E_short,
+#                              rowGroup = feature_data$GENE,
+#                              rowID = rownames(E_short),
 #                              method = 'MaxMean')
 #
-# saveRDS(E_genes, 'data/GSE3151_processed_e_mat.RDS')
+# saveRDS(E_genes, 'data/GSE58212_processed_e_mat.RDS')
 
 # step 1: differential expression analysis  -------------------------------
 
 # read in the processed data
-processed_data <- readRDS('data/GSE3151_processed_e_mat.RDS')
+processed_data <- readRDS('data/GSE58212_processed_e_mat.RDS')
 
 processed_exprs <- processed_data$datETcollapsed
 
 # define groups
 groups <- metadata[,c('geo_accession', 'treatment')] %>%
     setNames(c('sample_id', 'group'))
-groups$group %<>% factor %>% relevel(ref = 'GFP')
+groups$group %<>% factor %>% relevel(ref = 'NORMAL')
 
 # do differential expression analysis
 DEG <- diffExpression(expression_matrix = processed_exprs,
@@ -111,8 +136,8 @@ results <- purrr::map2(DEG, enriched_short,
                                         groups = .x$groups,
                                         DEPs = .y,
                                         pathways = reactome_pathways,
-                                        pathway_alpha = 0.001,
-                                        lambda = 0.01))
+                                        pathway_alpha = 0.04,
+                                        lambda = 0.001))
 
 # extract results ---------------------------------------------------------
 
@@ -122,8 +147,8 @@ pruned_networks <- purrr::map(results, ~ .$pruned_network)
 full_edges <- purrr::map(results, ~ .$full_network_results)
 pruned_edges <- purrr::map(results, ~ .$pruned_network_results)
 
-plot(full_networks[[1]])
-plot(pruned_networks[[1]])
+plot(full_networks[[4]])
+plot(pruned_networks[[4]])
 
 purrr::map(full_edges, ~nrow(.)) %>% unlist
 purrr::map(pruned_edges, ~nrow(.)) %>% unlist
@@ -217,15 +242,15 @@ gene_results <- purrr::map(pruned_edges,
 
 # save results ------------------------------------------------------------
 
-saveRDS(full_edges, 'results/microarray/final/GSE3151_full_edges.RDS')
-saveRDS(pruned_edges, 'results/microarray/final/GSE3151_pruned_edges.RDS')
-saveRDS(pathway_results, 'results/microarray/final/GSE3151_pathway_results.RDS')
-saveRDS(gene_results, 'results/microarray/final/GSE3151_gene_results.RDS')
+saveRDS(full_edges, 'results/microarray/final/GSE58212_full_edges.RDS')
+saveRDS(pruned_edges, 'results/microarray/final/GSE58212_pruned_edges.RDS')
+saveRDS(pathway_results, 'results/microarray/final/GSE58212_pathway_results.RDS')
+saveRDS(gene_results, 'results/microarray/final/GSE58212_gene_results.RDS')
 
-openxlsx::write.xlsx(full_edges, 'results/microarray/final/GSE3151_full_edges.xlsx')
-openxlsx::write.xlsx(pruned_edges, 'results/microarray/final/GSE3151_pruned_edges.xlsx')
-openxlsx::write.xlsx(pathway_results, 'results/microarray/final/GSE3151_pathway_results.xlsx')
-openxlsx::write.xlsx(gene_results, 'results/microarray/final/GSE3151_gene_results.xlsx')
+openxlsx::write.xlsx(full_edges, 'results/microarray/final/GSE58212_full_edges.xlsx')
+openxlsx::write.xlsx(pruned_edges, 'results/microarray/final/GSE58212_pruned_edges.xlsx')
+openxlsx::write.xlsx(pathway_results, 'results/microarray/final/GSE58212_pathway_results.xlsx')
+openxlsx::write.xlsx(gene_results, 'results/microarray/final/GSE58212_gene_results.xlsx')
 
 
 

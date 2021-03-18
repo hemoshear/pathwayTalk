@@ -33,24 +33,10 @@ crosstalkNetwork <- function(crosstalk_matrix, groups, alpha = 1, lambda = 'best
 
     if (lambda == 'best'){
 
-        full_data <- as.data.frame(crosstalk_matrix)
+        lasso_model <- glmnet::cv.glmnet(x = crosstalk_matrix, y = sample_phenotype, family = 'binomial',
+                                alpha = alpha)
 
-        full_data$phenotype <- factor(sample_phenotype)
-
-        train_control <- caret::trainControl(method = "cv",
-                                      number = 3,
-                                      savePredictions = TRUE,
-                                      classProbs = TRUE)
-
-        lasso_model <- caret::train(phenotype ~ .,
-                             data = full_data,
-                             method = 'glmnet',
-                             family = 'binomial',
-                             tuneGrid = expand.grid(.alpha = alpha,
-                                                    .lambda=seq(0.05, 0.5, 0.05)),
-                             trControl = train_control)
-
-        lambda <- lasso_model$bestTune$lambda
+        lambda <- lasso_model$lambda.min
 
     }
 
