@@ -35,11 +35,21 @@ cvWrapper <- function(expression_matrix,
         resample_summary <- purrr::map(groups_list, ~table(.$group))
     }
 
+    else if(sampling_method == 'down'){
+        full_list <- purrr::map(1:times,
+                                ~ caret::downSample(x = expression_matrix_t,
+                                                    y = groups$group,
+                                                    list = TRUE))
+        exprs_list <- purrr::map(full_list, ~t(.$x))
+        groups_list <- purrr::map(full_list, ~.$y)
+        sample_summary <- purrr::map(groups_list, ~table(.))
+    }
 
-    # else {
-    #     return(paste0("Sampling method should be a string ",
-    #                   "with the value 'partition', 'down', or 'up'"))
-    # }
+
+    else {
+        return(paste0("Sampling method should be a string ",
+                      "with the value 'partition' or 'down'"))
+    }
 
     # save sampling results
     output_list[['resample']] <- resample

@@ -111,7 +111,7 @@ gene_alpha = 0.01
 pathways = reactome_pathways
 pathway_alpha = 0.01
 lambda = 0.001
-sampling_method = 'partition'
+sampling_method = 'down'
 times = 5
 p = 0.6
 
