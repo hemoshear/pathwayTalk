@@ -119,11 +119,17 @@ cvWrapper <- function(expression_matrix,
                                            ~extractVertices(.)) %>%
         bind_rows(.id = 'resample')
     network_results_list <- split(network_results, network_results$contrast)
+    keeps <- purrr::map(network_results_list,
+                                       ~ duplicated(.[,c('V1', 'V2')]))
+    network_results_list <- purrr::map2(network_results_list, keeps,
+                                        ~ .x[.y,c('V1', 'V2')])
+    network_results_list <- purrr::map(network_results_list,
+                                        ~ unique(.))
 
 
     # generate full network
     generateFullNetwork <- function(network_df){
-        unique_vertices <- unique(network_df[,c('V1', 'V2')])
+        unique_vertices <- unique(network_df)
         network <- igraph::graph_from_data_frame(unique_vertices,
                                                  directed = FALSE)
         return(network)

@@ -104,18 +104,28 @@ groups$group %<>% factor %>% relevel(ref = 'NORMAL')
 # import pathways list
 reactome_pathways <- readRDS('data/reactome_pathways.RDS')
 
+expression_matrix = processed_exprs
+groups = groups
+platform = 'microarray'
+gene_alpha = 0.01
+pathways = reactome_pathways
+pathway_alpha = 0.01
+lambda = 0.001
+sampling_method = 'partition'
+times = 5
+p = 0.6
 
 # try cv wrapper ----------------------------------------------------------
 
 final_results <- cvWrapper(expression_matrix = processed_exprs,
                            groups = groups,
                            platform = 'microarray',
-                           gene_alpha = 0.05,
+                           gene_alpha = 0.01,
                            pathways = reactome_pathways,
                            pathway_alpha = 0.01,
-                           lambda = 0.01,
+                           lambda = 0.001,
                            sampling_method = 'partition',
-                           times = 3,
+                           times = 5,
                            p = 0.6)
 
 saveRDS(final_results, 'results/microarray/final/cv/GSE58212_cvWrapper_5.RDS')
